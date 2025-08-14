@@ -5,10 +5,11 @@ This is a complete example of a Kubernetes Aggregate API server that implements 
 ## Overview
 
 The Widget API server demonstrates:
-- **Custom Resource Definition**: `Widget` with a simple `size` specification
-- **In-Memory Storage**: Thread-safe storage implementing `rest.StandardStorage`
+- **Custom Resource Definition**: `Widget` with name, description, and size specification
+- **In-Memory Storage**: Thread-safe storage with mutex protection
 - **CRUD Operations**: Create, Read, Update, Delete, and List operations
-- **Kubernetes Integration**: Uses `apiserver-runtime` for easy setup
+- **Kubernetes Integration**: Direct integration with Kubernetes API server framework
+- **Aggregate API**: Extends Kubernetes API with custom resources
 
 ## Resource Definition
 
@@ -17,11 +18,18 @@ The Widget API server demonstrates:
 type Widget struct {
     metav1.TypeMeta   `json:",inline"`
     metav1.ObjectMeta `json:"metadata,omitempty"`
-    Spec              WidgetSpec `json:"spec,omitempty"`
+    Spec              WidgetSpec   `json:"spec,omitempty"`
+    Status            WidgetStatus `json:"status,omitempty"`
 }
 
 type WidgetSpec struct {
-    Size int `json:"size"`
+    Name        string `json:"name"`
+    Description string `json:"description"`
+    Size        int32  `json:"size"`
+}
+
+type WidgetStatus struct {
+    Phase string `json:"phase,omitempty"`
 }
 ```
 
@@ -39,99 +47,81 @@ Once deployed, the API server exposes these endpoints:
 
 1. **Build the server**:
    ```bash
-   go build -o widget-apiserver main.go
+   go build -o widget-apiserver .
    ```
 
-2. **Run locally** (for development):
+2. **Build Docker image**:
    ```bash
-   ./widget-apiserver --secure-port=8443 --etcd-servers=http://localhost:2379
+   docker build -t quay.io/zhujian/widget-apiserver:dev .
    ```
 
 3. **Deploy to Kubernetes**:
    ```bash
-   # Build Docker image
-   docker build -t widget-apiserver:latest .
-   
-   # Deploy to cluster
+   # Apply RBAC and deployment
    kubectl apply -f deploy.yaml
+
+   # Create APIService
+   kubectl apply -f apiservice.yaml
+
+   # Check deployment status
+   kubectl get pods -n widget-system
+   kubectl get apiservice widget-apiserver
    ```
 
 ## CRUD Examples
 
 ### Create a Widget
 ```bash
-curl -X POST https://localhost:8443/apis/things.myorg.io/v1alpha1/namespaces/default/widgets \
-  -H "Content-Type: application/json" \
-  -d '{
-    "apiVersion": "things.myorg.io/v1alpha1",
-    "kind": "Widget",
-    "metadata": {
-      "name": "my-widget"
-    },
-    "spec": {
-      "size": 42
-    }
-  }' \
-  --insecure
+kubectl update -f - <<EOF
+apiVersion: things.myorg.io/v1alpha1
+kind: Widget
+metadata:
+  name: test-widget
+  namespace: default
+spec:
+  name: "My Test Widget"
+  description: "A test widget for demonstration"
+  size: 42
+EOF
 ```
 
 ### Get a Widget
 ```bash
-curl https://localhost:8443/apis/things.myorg.io/v1alpha1/namespaces/default/widgets/my-widget --insecure
+kubectl get widget test-widget -n default -o yaml
 ```
 
 ### Update a Widget
 ```bash
-curl -X PUT https://localhost:8443/apis/things.myorg.io/v1alpha1/namespaces/default/widgets/my-widget \
-  -H "Content-Type: application/json" \
-  -d '{
-    "apiVersion": "things.myorg.io/v1alpha1",
-    "kind": "Widget",
-    "metadata": {
-      "name": "my-widget"
-    },
-    "spec": {
-      "size": 100
-    }
-  }' \
-  --insecure
+kubectl patch widget test-widget -n default --type='merge' -p='{"spec":{"size":100}}'
 ```
 
 ### List Widgets
 ```bash
-curl https://localhost:8443/apis/things.myorg.io/v1alpha1/namespaces/default/widgets --insecure
+kubectl get widgets -n default
 ```
 
 ### Delete a Widget
 ```bash
-curl -X DELETE https://localhost:8443/apis/things.myorg.io/v1alpha1/namespaces/default/widgets/my-widget --insecure
+kubectl delete widget test-widget -n default
 ```
 
-## Using kubectl (after deployment)
+## Troubleshooting
 
-Once deployed with the APIService, you can use kubectl:
+### Common Issues
 
-```bash
-# List widgets
-kubectl get widgets
+1. **APIService not Available**: Check pod status and logs
+   ```bash
+   kubectl get pods -n widget-system
+   kubectl logs -f -n widget-system -l app=widget-apiserver
+   ```
 
-# Create a widget
-kubectl apply -f - <<EOF
-apiVersion: things.myorg.io/v1alpha1
-kind: Widget
-metadata:
-  name: kubectl-widget
-  namespace: default
-spec:
-  size: 75
-EOF
+2. **Permission Errors**: Ensure RBAC is properly configured
+   ```bash
+   kubectl get clusterrole widget-apiserver-auth-reader
+   kubectl get clusterrolebinding widget-apiserver-auth-reader
+   ```
 
-# Get widget details
-kubectl get widget kubectl-widget -o yaml
-
-# Delete widget
-kubectl delete widget kubectl-widget
-```
+3. **List Operation Fails**: Fixed in latest version with proper interface implementation
 
 ## Testing
 
@@ -142,24 +132,25 @@ go test -v
 
 ## Key Components
 
-### 1. Widget Resource (`main.go:19-68`)
-- Implements `runtime.Object` interface
-- Defines the resource schema and metadata
-- Provides validation hooks
+### 1. Widget Resource (`main.go:35-77`)
+- Implements `runtime.Object` interface with DeepCopy methods
+- Defines the resource schema with spec and status
+- Includes TypeMeta and ObjectMeta for Kubernetes integration
 
-### 2. In-Memory Storage (`main.go:73-149`)
+### 2. In-Memory Storage (`main.go:85-175`)
 - Thread-safe storage with mutex protection
-- Implements `rest.StandardStorage` interface
-- Provides all CRUD operations
+- Implements Create, Read, Update, Delete, and List operations
+- Provides automatic metadata management (UID, timestamps, etc.)
 
-### 3. Storage Provider (`main.go:154-156`)
-- Factory function for creating storage instances
-- Used by the apiserver-runtime framework
+### 3. WidgetREST (`main.go:177-253`)
+- Implements multiple REST interfaces (Creater, Lister, Getter, etc.)
+- Bridges between HTTP API and storage layer
+- Provides namespace scoping and singular name support
 
-### 4. Main Server (`main.go:161-168`)
-- Sets up the API server using `apiserver-runtime`
-- Registers the Widget resource and storage
-- Enables local debugging
+### 4. API Server Setup (`main.go:255-360`)
+- Configures generic API server with custom options
+- Registers Widget API group and resources
+- Handles authentication delegation and TLS
 
 ## Architecture
 
@@ -191,6 +182,19 @@ For production use, consider:
 
 ## Dependencies
 
-- `k8s.io/apimachinery`: Kubernetes API machinery
-- `k8s.io/apiserver`: Kubernetes API server library
-- `sigs.k8s.io/apiserver-runtime`: Simplified API server framework
+- `k8s.io/apimachinery`: Kubernetes API machinery and runtime types
+- `k8s.io/apiserver`: Kubernetes API server framework and utilities
+- Direct implementation without external frameworks for learning purposes
+
+## Features Implemented
+
+- ✅ Custom resource with spec and status
+- ✅ In-memory storage with thread safety
+- ✅ Full CRUD operations (Create, Read, Update, Delete, List)
+- ✅ Kubernetes API server integration
+- ✅ Authentication delegation
+- ✅ RBAC integration
+- ✅ Namespace scoping
+- ✅ API discovery and OpenAPI schema
+- ✅ Docker containerization
+- ✅ Kubernetes deployment manifests

@@ -3,23 +3,25 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"sync"
 	"time"
 
+	// "net/http"
+
 	"github.com/spf13/pflag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	version "k8s.io/apimachinery/pkg/version"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/apiserver/pkg/endpoints/handlers/responsewriters"
 	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/klog/v2"
+	// "k8s.io/apiserver/pkg/endpoints/handlers/responsewriters"
 )
 
 const (
@@ -181,6 +183,14 @@ type WidgetREST struct {
 	storage *MemoryStorage
 }
 
+// Ensure WidgetREST implements the required interfaces
+var _ rest.Creater = &WidgetREST{}
+var _ rest.Lister = &WidgetREST{}
+var _ rest.Getter = &WidgetREST{}
+var _ rest.Updater = &WidgetREST{}
+var _ rest.GracefulDeleter = &WidgetREST{}
+var _ rest.Scoper = &WidgetREST{}
+
 func NewWidgetREST() *WidgetREST {
 	return &WidgetREST{
 		storage: NewMemoryStorage(),
@@ -199,7 +209,7 @@ func (r *WidgetREST) Get(ctx context.Context, name string, options *metav1.GetOp
 	return r.storage.Get(name)
 }
 
-func (r *WidgetREST) List(ctx context.Context, options *metav1.ListOptions) (runtime.Object, error) {
+func (r *WidgetREST) List(ctx context.Context, options *internalversion.ListOptions) (runtime.Object, error) {
 	return r.storage.List()
 }
 
@@ -324,6 +334,10 @@ func main() {
 	// Now disable etcd for in-memory storage after validation passes
 	options.Etcd = nil
 
+	// Disable optional features not available in all clusters
+	options.Admission = nil
+	options.Features = nil
+
 	// // Set default authentication options to avoid validation errors
 	// options.Authentication.RemoteKubeConfigFileOptional = true
 	// options.Authorization.RemoteKubeConfigFileOptional = true
@@ -348,13 +362,13 @@ func main() {
 		klog.Fatalf("Error creating server: %v", err)
 	}
 
-	server.GenericAPIServer.Handler.NonGoRestfulMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			responsewriters.WriteRawJSON(http.StatusOK, map[string]interface{}{"paths": []string{"/api", "/apis"}}, w)
-		}
-	})
+	// server.GenericAPIServer.Handler.NonGoRestfulMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	// 	if r.URL.Path == "/" {
+	// 		w.Header().Set("Content-Type", "application/json")
+	// 		w.WriteHeader(http.StatusOK)
+	// 		responsewriters.WriteRawJSON(http.StatusOK, map[string]interface{}{"paths": []string{"/api", "/apis"}}, w)
+	// 	}
+	// })
 
 	klog.Infof("Starting widget-apiserver...")
 	if err := server.Run(stopCh); err != nil {
