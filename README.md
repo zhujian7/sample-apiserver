@@ -78,6 +78,38 @@ Once deployed, the API server exposes these endpoints:
 - **List**: `GET /apis/things.myorg.io/v1alpha1/namespaces/{namespace}/gadgets`
 - **Delete**: `DELETE /apis/things.myorg.io/v1alpha1/namespaces/{namespace}/gadgets/{name}`
 
+## Quick Start
+
+### Option 1: Kind Cluster (Recommended for testing)
+
+1. **Set up Kind cluster with cert-manager**:
+   ```bash
+   ./deploy/kind/setup.sh
+   ```
+
+2. **Deploy the API server**:
+   ```bash
+   ./deploy/deploy.sh install
+   ```
+
+3. **Verify deployment**:
+   ```bash
+   kubectl get apiservice v1alpha1.things.myorg.io
+   kubectl get pods -n my-apiserver-system
+   ```
+
+### Option 2: Existing Kubernetes Cluster
+
+1. **Prerequisites**: Ensure cert-manager is installed
+   ```bash
+   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+   ```
+
+2. **Deploy the API server**:
+   ```bash
+   ./deploy/deploy.sh install
+   ```
+
 ## Building and Running
 
 1. **Build the server**:
@@ -88,16 +120,6 @@ Once deployed, the API server exposes these endpoints:
 2. **Build Docker image**:
    ```bash
    docker build -t quay.io/zhujian/mytest-apiserver:dev .
-   ```
-
-3. **Deploy to Kubernetes**:
-   ```bash
-   # Use the deployment script
-   ./deploy/deploy.sh install
-
-   # Check deployment status
-   kubectl get pods -n my-apiserver-system
-   kubectl get apiservice v1alpha1.things.myorg.io
    ```
 
 ## CRUD Examples
@@ -197,9 +219,43 @@ kubectl delete gadget test-gadget -n default
 
 ## Testing
 
-Run the unit tests:
+### Unit Tests
 ```bash
 go test -v
+```
+
+### Integration Testing
+After deploying to Kind cluster, test the full workflow:
+```bash
+# Test Widget operations
+kubectl apply -f - <<EOF
+apiVersion: things.myorg.io/v1alpha1
+kind: Widget
+metadata:
+  name: test-widget
+  namespace: default
+spec:
+  name: "Test Widget"
+  description: "Integration test widget"
+  size: 100
+EOF
+
+# Test Gadget operations  
+kubectl apply -f - <<EOF
+apiVersion: things.myorg.io/v1alpha1
+kind: Gadget
+metadata:
+  name: test-gadget
+  namespace: default
+spec:
+  type: "sensor"
+  version: "v1.0"
+  enabled: true
+  priority: 5
+EOF
+
+# Verify resources
+kubectl get widgets,gadgets
 ```
 
 ## Key Components
@@ -273,3 +329,45 @@ For production use, consider:
 - ✅ Kubernetes deployment manifests
 - ✅ Automated deployment scripts
 - ✅ Modular package structure
+- ✅ Kind cluster setup for easy testing
+- ✅ Automatic CA injection for TLS certificates
+
+## Cleanup
+
+### Remove API Server
+```bash
+./deploy/deploy.sh uninstall
+```
+
+### Delete Kind Cluster (if using Kind)
+```bash
+kind delete cluster --name kind
+```
+
+## Directory Structure
+
+```
+.
+├── main.go                          # API server main entry point
+├── go.mod                           # Go module definition
+├── Dockerfile                       # Container build file
+├── README.md                        # This file
+├── pkg/                            # Go packages
+│   ├── apis/                       # API resource definitions
+│   │   ├── widgets/                # Widget resource implementation
+│   │   └── gadgets/                # Gadget resource implementation
+│   └── common/                     # Shared constants and utilities
+└── deploy/                         # Deployment manifests
+    ├── deploy.sh                   # Automated deployment script
+    ├── README.md                   # Deployment documentation
+    ├── base/                       # Core Kubernetes manifests
+    │   ├── deploy.yaml            # RBAC, Deployment, Service
+    │   └── apiservice.yaml        # API registration
+    ├── certificates/               # TLS certificate setup
+    │   ├── ca.yaml               # Certificate Authority
+    │   ├── issuer.yaml           # cert-manager Issuer
+    │   └── cert.yaml             # API server certificate
+    └── kind/                       # Kind cluster setup
+        ├── cluster-config.yaml    # Kind cluster configuration
+        └── setup.sh              # Automated Kind setup
+```
