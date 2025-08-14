@@ -1,0 +1,20 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-cluster-issuer
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: widget-ca
+  namespace: widget-system
+spec:
+  isCA: true
+  commonName: widget-ca
+  secretName: widget-ca-secret
+  issuerRef:
+    name: selfsigned-cluster-issuer
+    kind: ClusterIssuer
+

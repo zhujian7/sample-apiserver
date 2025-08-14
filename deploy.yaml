@@ -1,0 +1,81 @@
+# rbac+deploy.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: widget-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: widget-apiserver
+  namespace: widget-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: widget-apiserver-delegated-auth
+rules:
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["subjectaccessreviews"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: widget-apiserver-delegated-auth
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: widget-apiserver-delegated-auth
+subjects:
+  - kind: ServiceAccount
+    name: widget-apiserver
+    namespace: widget-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: widget-apiserver
+  namespace: widget-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: widget-apiserver}
+  template:
+    metadata:
+      labels: {app: widget-apiserver}
+    spec:
+      serviceAccountName: widget-apiserver
+      containers:
+        - name: server
+          image: quay.io/zhujian/widget-apiserver:dev # or widget-apiserver:dev if using Docker
+          imagePullPolicy: Always
+          args:
+            - --secure-port=8443
+            - --tls-cert-file=/tls/tls.crt
+            - --tls-private-key-file=/tls/tls.key
+          ports:
+            - containerPort: 8443
+          volumeMounts:
+            - name: tls
+              mountPath: /tls
+              readOnly: true
+      volumes:
+        - name: tls
+          secret:
+            secretName: widget-apiserver-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: widget-apiserver
+  namespace: widget-system
+spec:
+  selector: {app: widget-apiserver}
+  ports:
+    - port: 443
+      targetPort: 8443
+
