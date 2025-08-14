@@ -892,9 +892,6 @@ k8s.io/component-base/metrics/prometheus/workqueue
 k8s.io/component-base/metrics/testutil
 k8s.io/component-base/traces
 k8s.io/component-base/version
-# k8s.io/klog v1.0.0
-## explicit; go 1.12
-k8s.io/klog
 # k8s.io/klog/v2 v2.30.0
 ## explicit; go 1.13
 k8s.io/klog/v2
@@ -928,18 +925,6 @@ k8s.io/utils/trace
 ## explicit; go 1.17
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/pkg/client
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/proto/client
-# sigs.k8s.io/apiserver-runtime v1.1.1
-## explicit; go 1.17
-sigs.k8s.io/apiserver-runtime/internal/sample-apiserver/pkg/apiserver
-sigs.k8s.io/apiserver-runtime/internal/sample-apiserver/pkg/cmd/server
-sigs.k8s.io/apiserver-runtime/pkg/builder
-sigs.k8s.io/apiserver-runtime/pkg/builder/resource
-sigs.k8s.io/apiserver-runtime/pkg/builder/resource/resourcerest
-sigs.k8s.io/apiserver-runtime/pkg/builder/resource/resourcestrategy
-sigs.k8s.io/apiserver-runtime/pkg/builder/resource/util
-sigs.k8s.io/apiserver-runtime/pkg/builder/rest
-sigs.k8s.io/apiserver-runtime/pkg/util/context
-sigs.k8s.io/apiserver-runtime/pkg/util/loopback
 # sigs.k8s.io/json v0.0.0-20211020170558-c049b76a60c6
 ## explicit; go 1.16
 sigs.k8s.io/json

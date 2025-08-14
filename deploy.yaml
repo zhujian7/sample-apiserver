@@ -23,6 +23,30 @@ rules:
     verbs: ["create"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: widget-apiserver-auth-reader
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get"]
+    resourceNames: ["extension-apiserver-authentication"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: widget-apiserver-auth-reader
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: widget-apiserver-auth-reader
+subjects:
+  - kind: ServiceAccount
+    name: widget-apiserver
+    namespace: widget-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: widget-apiserver-delegated-auth
