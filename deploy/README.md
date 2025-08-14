@@ -1,6 +1,6 @@
-# Widget API Server Deployment
+# MyTest API Server Deployment
 
-This directory contains all deployment manifests for the Widget API Server.
+This directory contains all deployment manifests for the MyTest API Server.
 
 ## Directory Structure
 
@@ -28,6 +28,13 @@ deploy/
 
 ### Deployment Steps
 
+**Option 1: Automated deployment (Recommended)**
+```bash
+./deploy/deploy.sh install
+```
+
+**Option 2: Manual deployment**
+
 1. **Deploy base components** (RBAC, Deployment, Service):
    ```bash
    kubectl apply -f deploy/base/deploy.yaml
@@ -51,7 +58,7 @@ Check deployment status:
 kubectl get pods -n my-apiserver-system
 
 # Check APIService
-kubectl get apiservice widget-apiserver
+kubectl get apiservice v1alpha1.things.myorg.io
 
 # Check custom resources are available
 kubectl api-resources | grep things.myorg.io
@@ -63,12 +70,14 @@ kubectl api-resources | grep things.myorg.io
 
 - **`deploy.yaml`**: Contains all core Kubernetes resources:
   - Namespace: `my-apiserver-system`
-  - ServiceAccount: `widget-apiserver`
+  - ServiceAccount: `mytest-apiserver`
   - ClusterRole & ClusterRoleBinding: RBAC permissions
-  - Deployment: Widget API server pod
+  - Deployment: MyTest API server pod
   - Service: Internal service exposure
 
 - **`apiservice.yaml`**: Registers the custom API with Kubernetes API aggregation layer
+  - Uses automatic CA injection via cert-manager annotation
+  - No hardcoded certificates required
 
 ### Certificate Management
 
@@ -98,25 +107,25 @@ Default resource limits in `deploy.yaml`:
 1. **APIService not Available**:
    ```bash
    kubectl describe apiservice v1alpha1.things.myorg.io
-   kubectl logs -n my-apiserver-system -l app=widget-apiserver
+   kubectl logs -n my-apiserver-system -l app=mytest-apiserver
    ```
 
 2. **Certificate Issues**:
    ```bash
    kubectl describe certificate -n my-apiserver-system
-   kubectl describe secret widget-apiserver-tls -n my-apiserver-system
+   kubectl describe secret mytest-apiserver-tls -n my-apiserver-system
    ```
 
 3. **RBAC Issues**:
    ```bash
-   kubectl auth can-i create widgets --as=system:serviceaccount:my-apiserver-system:widget-apiserver
+   kubectl auth can-i create widgets --as=system:serviceaccount:my-apiserver-system:mytest-apiserver
    ```
 
 ### Logs
 
 View API server logs:
 ```bash
-kubectl logs -f -n my-apiserver-system -l app=widget-apiserver
+kubectl logs -f -n my-apiserver-system -l app=mytest-apiserver
 ```
 
 ## Testing
@@ -163,8 +172,12 @@ kubectl get gadgets
 
 ## Cleanup
 
-To remove the deployment:
+**Option 1: Automated cleanup (Recommended)**
+```bash
+./deploy/deploy.sh uninstall
+```
 
+**Option 2: Manual cleanup**
 ```bash
 # Remove custom resources first
 kubectl delete widgets --all --all-namespaces

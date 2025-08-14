@@ -64,19 +64,21 @@ install() {
         echo "3. Setting up TLS certificates..."
         kubectl apply -f "$SCRIPT_DIR/certificates/"
         
-        # Wait for certificate to be ready
-        echo "4. Waiting for certificate to be ready..."
+        # Wait for certificates to be ready
+        echo "4. Waiting for CA certificate to be ready..."
+        kubectl wait --for=condition=ready --timeout=120s certificate/my-apiserver-ca -n $NAMESPACE
+        echo "5. Waiting for API server certificate to be ready..."
         kubectl wait --for=condition=ready --timeout=120s certificate/mytest-apiserver-cert -n $NAMESPACE
     else
         echo "3. Skipping certificate setup (cert-manager not available)"
     fi
     
     # Register APIService
-    echo "5. Registering APIService..."
+    echo "6. Registering APIService..."
     kubectl apply -f "$SCRIPT_DIR/base/apiservice.yaml"
     
     # Wait for APIService to be available
-    echo "6. Waiting for APIService to be available..."
+    echo "7. Waiting for APIService to be available..."
     for i in {1..30}; do
         if kubectl get apiservice v1alpha1.things.myorg.io -o jsonpath='{.status.conditions[?(@.type=="Available")].status}' | grep -q "True"; then
             break
