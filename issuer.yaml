@@ -1,9 +1,0 @@
-apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  name: widget-ca-issuer
-  namespace: widget-system
-spec:
-  ca:
-    secretName: widget-ca-secret
-

@@ -1,4 +1,4 @@
-module example.com/widget-apiserver
+module example.com/mytest-apiserver
 
 go 1.24.3
 

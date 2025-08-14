@@ -1,0 +1,52 @@
+# Test Examples for Widget API Server
+# Apply these manifests to test the deployed API server
+
+---
+# Example Widget
+apiVersion: things.myorg.io/v1alpha1
+kind: Widget
+metadata:
+  name: example-widget
+  namespace: default
+spec:
+  name: "Example Widget"
+  description: "A sample widget for testing"
+  size: 42
+
+---
+# Example Gadget
+apiVersion: things.myorg.io/v1alpha1
+kind: Gadget
+metadata:
+  name: example-gadget
+  namespace: default
+spec:
+  type: "sensor"
+  version: "v2.1.0"
+  enabled: true
+  priority: 10
+
+---
+# Another Widget with different specs
+apiVersion: things.myorg.io/v1alpha1
+kind: Widget
+metadata:
+  name: large-widget
+  namespace: default
+spec:
+  name: "Large Widget"
+  description: "A larger widget for load testing"
+  size: 100
+
+---
+# Another Gadget with different specs
+apiVersion: things.myorg.io/v1alpha1
+kind: Gadget
+metadata:
+  name: high-priority-gadget
+  namespace: default
+spec:
+  type: "actuator"
+  version: "v3.0.0"
+  enabled: true
+  priority: 100

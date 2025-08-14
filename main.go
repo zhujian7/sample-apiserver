@@ -12,11 +12,10 @@ import (
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/klog/v2"
 
-	"example.com/widget-apiserver/pkg/apis/widgets"
-	"example.com/widget-apiserver/pkg/apis/gadgets"
-	"example.com/widget-apiserver/pkg/common"
+	"example.com/mytest-apiserver/pkg/apis/gadgets"
+	"example.com/mytest-apiserver/pkg/apis/widgets"
+	"example.com/mytest-apiserver/pkg/common"
 )
-
 
 var (
 	Scheme = runtime.NewScheme()
@@ -49,11 +48,11 @@ type Config struct {
 	GenericConfig *genericapiserver.RecommendedConfig
 }
 
-type WidgetAPIServer struct {
+type MyAPIServer struct {
 	GenericAPIServer *genericapiserver.GenericAPIServer
 }
 
-func (s *WidgetAPIServer) Run(stopCh <-chan struct{}) error {
+func (s *MyAPIServer) Run(stopCh <-chan struct{}) error {
 	return s.GenericAPIServer.PrepareRun().Run(stopCh)
 }
 
@@ -73,13 +72,13 @@ func (c *Config) Complete() *Config {
 	return c
 }
 
-func (c *Config) New() (*WidgetAPIServer, error) {
-	genericServer, err := c.GenericConfig.Complete().New("widget-apiserver", genericapiserver.NewEmptyDelegate())
+func (c *Config) New() (*MyAPIServer, error) {
+	genericServer, err := c.GenericConfig.Complete().New("my-apiserver", genericapiserver.NewEmptyDelegate())
 	if err != nil {
 		return nil, err
 	}
 
-	s := &WidgetAPIServer{
+	s := &MyAPIServer{
 		GenericAPIServer: genericServer,
 	}
 
@@ -124,7 +123,7 @@ func main() {
 		klog.Fatalf("Error creating server: %v", err)
 	}
 
-	klog.Infof("Starting widget-apiserver...")
+	klog.Infof("Starting my-apiserver...")
 	if err := server.Run(stopCh); err != nil {
 		klog.Fatalf("Error running server: %v", err)
 	}

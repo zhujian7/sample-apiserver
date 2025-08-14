@@ -2,18 +2,18 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: widget-system
+  name: my-apiserver-system
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: widget-apiserver
-  namespace: widget-system
+  name: mytest-apiserver
+  namespace: my-apiserver-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: widget-apiserver-delegated-auth
+  name: mytest-apiserver-delegated-auth
 rules:
   - apiGroups: ["authentication.k8s.io"]
     resources: ["tokenreviews"]
@@ -25,7 +25,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: widget-apiserver-auth-reader
+  name: mytest-apiserver-auth-reader
 rules:
   - apiGroups: [""]
     resources: ["configmaps"]
@@ -44,60 +44,60 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: widget-apiserver-auth-reader
+  name: mytest-apiserver-auth-reader
   namespace: kube-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: widget-apiserver-auth-reader
+  name: mytest-apiserver-auth-reader
 subjects:
   - kind: ServiceAccount
-    name: widget-apiserver
-    namespace: widget-system
+    name: mytest-apiserver
+    namespace: my-apiserver-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: widget-apiserver-delegated-auth
+  name: mytest-apiserver-delegated-auth
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: widget-apiserver-delegated-auth
+  name: mytest-apiserver-delegated-auth
 subjects:
   - kind: ServiceAccount
-    name: widget-apiserver
-    namespace: widget-system
+    name: mytest-apiserver
+    namespace: my-apiserver-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: widget-apiserver-auth-reader
+  name: mytest-apiserver-auth-reader
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: widget-apiserver-auth-reader
+  name: mytest-apiserver-auth-reader
 subjects:
   - kind: ServiceAccount
-    name: widget-apiserver
-    namespace: widget-system
+    name: mytest-apiserver
+    namespace: my-apiserver-system
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: widget-apiserver
-  namespace: widget-system
+  name: mytest-apiserver
+  namespace: my-apiserver-system
 spec:
   replicas: 1
   selector:
-    matchLabels: {app: widget-apiserver}
+    matchLabels: {app: mytest-apiserver}
   template:
     metadata:
-      labels: {app: widget-apiserver}
+      labels: {app: mytest-apiserver}
     spec:
-      serviceAccountName: widget-apiserver
+      serviceAccountName: mytest-apiserver
       containers:
         - name: server
-          image: quay.io/zhujian/widget-apiserver:dev # or widget-apiserver:dev if using Docker
+          image: quay.io/zhujian/mytest-apiserver:dev # or mytest-apiserver:dev if using Docker
           imagePullPolicy: Always
           args:
             - --secure-port=8443
@@ -112,15 +112,15 @@ spec:
       volumes:
         - name: tls
           secret:
-            secretName: widget-apiserver-tls
+            secretName: mytest-apiserver-tls
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: widget-apiserver
-  namespace: widget-system
+  name: mytest-apiserver
+  namespace: my-apiserver-system
 spec:
-  selector: {app: widget-apiserver}
+  selector: {app: mytest-apiserver}
   ports:
     - port: 443
       targetPort: 8443

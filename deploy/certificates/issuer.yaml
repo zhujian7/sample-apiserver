@@ -1,0 +1,9 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: my-apiserver-ca-issuer
+  namespace: my-apiserver-system
+spec:
+  ca:
+    secretName: my-apiserver-ca-secret
+

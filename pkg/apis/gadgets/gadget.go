@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/registry/rest"
 
-	"example.com/widget-apiserver/pkg/common"
+	"example.com/mytest-apiserver/pkg/common"
 )
 
 type Gadget struct {

@@ -13,7 +13,7 @@ RUN go mod download
 COPY . .
 
 # Build statically for Linux
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o widget-apiserver main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o mytest-apiserver main.go
 
 # ============================
 # 2️⃣ Runtime stage
@@ -24,7 +24,7 @@ FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 RUN microdnf install -y ca-certificates && microdnf clean all
 
 # Copy binary from builder
-COPY --from=builder /workspace/widget-apiserver /usr/local/bin/widget-apiserver
+COPY --from=builder /workspace/mytest-apiserver /usr/local/bin/mytest-apiserver
 
 # Create nonroot user
 RUN microdnf install -y shadow-utils && \
@@ -33,4 +33,4 @@ RUN microdnf install -y shadow-utils && \
 
 USER 65532:65532
 
-ENTRYPOINT ["/usr/local/bin/widget-apiserver"]
+ENTRYPOINT ["/usr/local/bin/mytest-apiserver"]
