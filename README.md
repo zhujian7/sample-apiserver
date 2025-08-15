@@ -1,9 +1,9 @@
 # MyTest API Server - Kubernetes Aggregate API Example
 
-[![CI](./sample-apiserver/workflows/CI/badge.svg)](./.github/workflows/ci.yml)
-[![Security](./sample-apiserver/workflows/Security/badge.svg)](./.github/workflows/security.yml)
-[![Docker](./sample-apiserver/workflows/Docker%20Build%20and%20Push/badge.svg)](./.github/workflows/docker.yml)
-[![Release](./sample-apiserver/workflows/Release/badge.svg)](./.github/workflows/release.yml)
+[![CI](https://github.com/zhujian7/sample-apiserver/workflows/CI/badge.svg)](./.github/workflows/ci.yml)
+[![Security](https://github.com/zhujian7/sample-apiserver/workflows/Security/badge.svg)](./.github/workflows/security.yml)
+[![Docker](https://github.com/zhujian7/sample-apiserver/workflows/Docker%20Build%20and%20Push/badge.svg)](./.github/workflows/docker.yml)
+[![Release](https://github.com/zhujian7/sample-apiserver/workflows/Release/badge.svg)](./.github/workflows/release.yml)
 
 This is a complete example of a Kubernetes Aggregate API server that implements custom `Widget` and `Gadget` resources with full CRUD operations using in-memory storage.
 
@@ -120,7 +120,7 @@ make dev-teardown
 
 1. **Prerequisites**: Ensure cert-manager is installed
    ```bash
-   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.18.2/cert-manager.yaml
    ```
 
 2. **Deploy the API server**:

@@ -23,7 +23,7 @@ deploy/
 1. **Kubernetes cluster** (v1.20+)
 2. **cert-manager** installed (for TLS certificates)
    ```bash
-   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.18.2/cert-manager.yaml
    ```
 
 ### Deployment Steps
