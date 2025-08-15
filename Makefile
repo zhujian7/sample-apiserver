@@ -208,29 +208,8 @@ dev-restart: undeploy docker-build deploy ## Rebuild and redeploy for developmen
 .PHONY: quick-test
 quick-test: ## Quick end-to-end test with sample resources
 	@echo "$(YELLOW)Running quick end-to-end test...$(NC)"
-	@kubectl apply -f - <<EOF || true\n\
-	apiVersion: things.myorg.io/v1alpha1\n\
-	kind: Widget\n\
-	metadata:\n\
-	  name: test-widget\n\
-	  namespace: default\n\
-	spec:\n\
-	  name: "Test Widget"\n\
-	  description: "Quick test widget"\n\
-	  size: 42\n\
-	EOF
-	@kubectl apply -f - <<EOF || true\n\
-	apiVersion: things.myorg.io/v1alpha1\n\
-	kind: Gadget\n\
-	metadata:\n\
-	  name: test-gadget\n\
-	  namespace: default\n\
-	spec:\n\
-	  type: "sensor"\n\
-	  version: "v1.0"\n\
-	  enabled: true\n\
-	  priority: 10\n\
-	EOF
+	@printf 'apiVersion: things.myorg.io/v1alpha1\nkind: Widget\nmetadata:\n  name: test-widget\n  namespace: default\nspec:\n  name: "Test Widget"\n  description: "Quick test widget"\n  size: 42\n' | kubectl create -f - || true
+	@printf 'apiVersion: things.myorg.io/v1alpha1\nkind: Gadget\nmetadata:\n  name: test-gadget\n  namespace: default\nspec:\n  type: "sensor"\n  version: "v1.0"\n  enabled: true\n  priority: 10\n' | kubectl create -f - || true
 	@echo "$(BLUE)Created test resources:$(NC)"
 	@$(KUBECTL) get widgets,gadgets
 	@echo "$(YELLOW)Cleaning up test resources...$(NC)"
