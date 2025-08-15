@@ -11,6 +11,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"example.com/mytest-apiserver/pkg/apis/gadgets"
 	"example.com/mytest-apiserver/pkg/apis/widgets"
@@ -43,7 +44,7 @@ func TestWidgetGadgetIntegration(t *testing.T) {
 	}
 
 	// Create related gadgets
-	gadgets := []*gadgets.Gadget{
+	testGadgets := []*gadgets.Gadget{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "sensor-1",
@@ -83,7 +84,7 @@ func TestWidgetGadgetIntegration(t *testing.T) {
 	}
 
 	// Create all gadgets
-	for i, gadget := range gadgets {
+	for i, gadget := range testGadgets {
 		_, err := gadgetREST.Create(ctx, gadget, nil, &metav1.CreateOptions{})
 		if err != nil {
 			t.Fatalf("Failed to create gadget %d: %v", i, err)
@@ -96,9 +97,9 @@ func TestWidgetGadgetIntegration(t *testing.T) {
 		t.Fatalf("Failed to list widgets: %v", err)
 	}
 
-	widgets := widgetList.(*widgets.WidgetList)
-	if len(widgets.Items) != 1 {
-		t.Errorf("Expected 1 widget, got %d", len(widgets.Items))
+	widgetItems := widgetList.(*widgets.WidgetList)
+	if len(widgetItems.Items) != 1 {
+		t.Errorf("Expected 1 widget, got %d", len(widgetItems.Items))
 	}
 
 	// List all gadgets
@@ -107,9 +108,9 @@ func TestWidgetGadgetIntegration(t *testing.T) {
 		t.Fatalf("Failed to list gadgets: %v", err)
 	}
 
-	gadgetsList := gadgetList.(*gadgets.GadgetList)
-	if len(gadgetsList.Items) != 3 {
-		t.Errorf("Expected 3 gadgets, got %d", len(gadgetsList.Items))
+	gadgetItems := gadgetList.(*gadgets.GadgetList)
+	if len(gadgetItems.Items) != 3 {
+		t.Errorf("Expected 3 gadgets, got %d", len(gadgetItems.Items))
 	}
 
 	// Test updating widget based on gadget states
@@ -121,7 +122,7 @@ func TestWidgetGadgetIntegration(t *testing.T) {
 	mainWidget := retrievedWidget.(*widgets.Widget)
 	// Simulate updating widget size based on number of active gadgets
 	activeGadgets := 0
-	for _, gadget := range gadgetsList.Items {
+	for _, gadget := range gadgetItems.Items {
 		if gadget.Spec.Enabled {
 			activeGadgets++
 		}
@@ -150,7 +151,7 @@ func TestWidgetGadgetIntegration(t *testing.T) {
 	}
 
 	// Clean up - delete all resources
-	for _, gadget := range gadgetsList.Items {
+	for _, gadget := range gadgetItems.Items {
 		_, _, err := gadgetREST.Delete(ctx, gadget.Name, nil, &metav1.DeleteOptions{})
 		if err != nil {
 			t.Errorf("Failed to delete gadget %s: %v", gadget.Name, err)
@@ -233,10 +234,10 @@ func TestConcurrentOperations(t *testing.T) {
 		t.Fatalf("Failed to list widgets: %v", err)
 	}
 
-	widgets := widgetList.(*widgets.WidgetList)
+	widgetItems := widgetList.(*widgets.WidgetList)
 	expectedWidgets := numWorkers * numOperations
-	if len(widgets.Items) != expectedWidgets {
-		t.Errorf("Expected %d widgets, got %d", expectedWidgets, len(widgets.Items))
+	if len(widgetItems.Items) != expectedWidgets {
+		t.Errorf("Expected %d widgets, got %d", expectedWidgets, len(widgetItems.Items))
 	}
 
 	gadgetList, err := gadgetREST.List(ctx, &internalversion.ListOptions{})
@@ -244,10 +245,10 @@ func TestConcurrentOperations(t *testing.T) {
 		t.Fatalf("Failed to list gadgets: %v", err)
 	}
 
-	gadgets := gadgetList.(*gadgets.GadgetList)
+	gadgetItems := gadgetList.(*gadgets.GadgetList)
 	expectedGadgets := numWorkers * numOperations
-	if len(gadgets.Items) != expectedGadgets {
-		t.Errorf("Expected %d gadgets, got %d", expectedGadgets, len(gadgets.Items))
+	if len(gadgetItems.Items) != expectedGadgets {
+		t.Errorf("Expected %d gadgets, got %d", expectedGadgets, len(gadgetItems.Items))
 	}
 }
 
@@ -368,10 +369,10 @@ func TestResourceLifecycle(t *testing.T) {
 
 // mockUpdateInfo implements rest.UpdatedObjectInfo for testing
 type mockUpdateInfo struct {
-	updatedObj interface{}
+	updatedObj runtime.Object
 }
 
-func (m *mockUpdateInfo) UpdatedObject(ctx context.Context, oldObj interface{}) (interface{}, error) {
+func (m *mockUpdateInfo) UpdatedObject(ctx context.Context, oldObj runtime.Object) (runtime.Object, error) {
 	return m.updatedObj, nil
 }
 
