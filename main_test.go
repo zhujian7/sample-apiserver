@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/internalversion"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"example.com/mytest-apiserver/pkg/apis/gadgets"
@@ -32,7 +32,7 @@ func TestSchemeRegistration(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to create Widget from scheme: %v", err)
 	}
-	
+
 	if _, ok := obj.(*widgets.Widget); !ok {
 		t.Errorf("Expected *widgets.Widget, got %T", obj)
 	}
@@ -50,7 +50,7 @@ func TestSchemeRegistration(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to create Gadget from scheme: %v", err)
 	}
-	
+
 	if _, ok := obj.(*gadgets.Gadget); !ok {
 		t.Errorf("Expected *gadgets.Gadget, got %T", obj)
 	}

@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package main
@@ -8,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/internalversion"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"example.com/mytest-apiserver/pkg/apis/gadgets"
 	"example.com/mytest-apiserver/pkg/apis/widgets"
