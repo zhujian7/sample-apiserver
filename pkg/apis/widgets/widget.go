@@ -168,6 +168,7 @@ var _ rest.Getter = &WidgetREST{}
 var _ rest.Updater = &WidgetREST{}
 var _ rest.GracefulDeleter = &WidgetREST{}
 var _ rest.Scoper = &WidgetREST{}
+var _ rest.Storage = &WidgetREST{}
 
 func NewWidgetREST() *WidgetREST {
 	return &WidgetREST{
@@ -247,4 +248,8 @@ func (r *WidgetREST) NamespaceScoped() bool {
 
 func (r *WidgetREST) GetSingularName() string {
 	return "widget"
+}
+
+func (r *WidgetREST) Destroy() {
+	// Cleanup resources if needed
 }

@@ -169,6 +169,7 @@ var _ rest.Getter = &GadgetREST{}
 var _ rest.Updater = &GadgetREST{}
 var _ rest.GracefulDeleter = &GadgetREST{}
 var _ rest.Scoper = &GadgetREST{}
+var _ rest.Storage = &GadgetREST{}
 
 func NewGadgetREST() *GadgetREST {
 	return &GadgetREST{
@@ -248,4 +249,8 @@ func (r *GadgetREST) NamespaceScoped() bool {
 
 func (r *GadgetREST) GetSingularName() string {
 	return "gadget"
+}
+
+func (r *GadgetREST) Destroy() {
+	// Cleanup resources if needed
 }
