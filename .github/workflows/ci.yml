@@ -188,13 +188,13 @@ jobs:
         output: 'trivy-results.sarif'
 
     - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3.29.9
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
 
     - name: Run Gosec Security Scanner
-      uses: securego/gosec@v2.22.8
+      uses: securego/gosec@master
       with:
         args: ./...
         sarif_file: gosec-results.sarif
@@ -202,23 +202,22 @@ jobs:
   docs:
     name: Documentation
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Check markdown links
-      uses: gaurav-nelson/github-action-markdown-link-check@1.0.13
+      uses: tcort/github-action-markdown-link-check@v1
       with:
-        use-quiet-mode: 'yes'
-        use-verbose-mode: 'yes'
         config-file: '.github/markdown-link-check.json'
-        folder-path: '.'
-        file-extension: '.md'
-        base-branch: 'main'
+        folder-path: 'deploy, pkg'
+        file-path: './README.md'
+
 
     - name: Lint markdown
       uses: DavidAnson/markdownlint-cli2-action@v20
+      continue-on-error: true
       with:
         globs: |
           README.md

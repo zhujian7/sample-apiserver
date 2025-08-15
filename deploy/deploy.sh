@@ -7,6 +7,23 @@ set -e
 NAMESPACE="my-apiserver-system"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
+# Helper function to delete custom resources with proper error handling
+delete_custom_resource() {
+    local resource_type=$1
+    local output
+    if output=$(kubectl delete "$resource_type" --all --all-namespaces --ignore-not-found=true 2>&1); then
+        echo "   Deleted all $resource_type resources"
+    else
+        if echo "$output" | grep -q "the server doesn't have a resource type"; then
+            echo "   $resource_type resource type not found (expected if CRD not installed)"
+        else
+            echo "   Warning: Failed to delete $resource_type: $output"
+            return 1
+        fi
+    fi
+    return 0
+}
+
 print_usage() {
     echo "Usage: $0 [install|uninstall|status]"
     echo ""
@@ -55,24 +72,24 @@ install() {
     echo "1. Applying base deployment..."
     kubectl apply -f "$SCRIPT_DIR/base/deploy.yaml"
     
-    # Wait for deployment to be ready
-    echo "2. Waiting for deployment to be ready..."
-    kubectl wait --for=condition=available --timeout=300s deployment/mytest-apiserver -n $NAMESPACE
-    
     # Apply certificates (if cert-manager is available)
     if kubectl get crd certificates.cert-manager.io &> /dev/null; then
-        echo "3. Setting up TLS certificates..."
+        echo "2. Setting up TLS certificates..."
         kubectl apply -f "$SCRIPT_DIR/certificates/"
         
         # Wait for certificates to be ready
-        echo "4. Waiting for CA certificate to be ready..."
+        echo "3. Waiting for CA certificate to be ready..."
         kubectl wait --for=condition=ready --timeout=120s certificate/my-apiserver-ca -n $NAMESPACE
-        echo "5. Waiting for API server certificate to be ready..."
+        echo "4. Waiting for API server certificate to be ready..."
         kubectl wait --for=condition=ready --timeout=120s certificate/mytest-apiserver-cert -n $NAMESPACE
     else
-        echo "3. Skipping certificate setup (cert-manager not available)"
+        echo "2. Skipping certificate setup (cert-manager not available)"
     fi
     
+    # Wait for deployment to be ready
+    echo "5. Waiting for deployment to be ready..."
+    kubectl wait --for=condition=available --timeout=300s deployment/mytest-apiserver -n $NAMESPACE
+
     # Register APIService
     echo "6. Registering APIService..."
     kubectl apply -f "$SCRIPT_DIR/base/apiservice.yaml"
@@ -98,8 +115,8 @@ uninstall() {
     
     # Remove custom resources first
     echo "1. Removing custom resources..."
-    kubectl delete widgets --all --all-namespaces --ignore-not-found=true
-    kubectl delete gadgets --all --all-namespaces --ignore-not-found=true
+    delete_custom_resource "widgets"
+    delete_custom_resource "gadgets"
     
     # Remove APIService
     echo "2. Removing APIService..."
