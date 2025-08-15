@@ -196,10 +196,16 @@ jobs:
       with:
         sarif_file: 'trivy-results.sarif'
 
-    - name: Run gosec Security Scanner
-      uses: securecodewarrior/github-action-gosec@master
+    - name: Set up Go
+      uses: actions/setup-go@v5
       with:
-        args: './...'
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Install Gosec
+      run: go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+
+    - name: Run gosec Security Scanner
+      run: gosec ./...
 
   docs:
     name: Documentation

@@ -15,6 +15,9 @@ jobs:
   docker:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      digest: ${{ steps.build.outputs.digest }}
     
     steps:
     - name: Checkout code
@@ -43,9 +46,11 @@ jobs:
           type=semver,pattern={{major}}.{{minor}}
           type=semver,pattern={{major}}
           type=raw,value=latest,enable={{is_default_branch}}
-          type=sha,prefix={{branch}}-
+          type=sha,prefix={{branch}}-,enable={{is_default_branch}}
+          type=sha,prefix=pr-,enable=${{ github.event_name == 'pull_request' }}
 
     - name: Build and push Docker image
+      id: build
       uses: docker/build-push-action@v5
       with:
         context: .
