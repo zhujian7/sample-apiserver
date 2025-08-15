@@ -3,12 +3,13 @@ package widgets
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestWidgetStorage_Create(t *testing.T) {
-	storage := NewWidgetStorage()
+	storage := NewMemoryStorage()
 
 	widget := &Widget{
 		ObjectMeta: metav1.ObjectMeta{
@@ -55,7 +56,7 @@ func TestWidgetStorage_Create(t *testing.T) {
 }
 
 func TestWidgetStorage_Get(t *testing.T) {
-	storage := NewWidgetStorage()
+	storage := NewMemoryStorage()
 
 	// Test getting non-existent widget
 	_, err := storage.Get("non-existent")
@@ -95,7 +96,7 @@ func TestWidgetStorage_Get(t *testing.T) {
 }
 
 func TestWidgetStorage_Update(t *testing.T) {
-	storage := NewWidgetStorage()
+	storage := NewMemoryStorage()
 
 	// Test updating non-existent widget
 	widget := &Widget{
@@ -127,7 +128,11 @@ func TestWidgetStorage_Update(t *testing.T) {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
 
-	// Update the widget
+	// Store original ResourceVersion before update
+	originalResourceVersion := created.ResourceVersion
+
+	// Update the widget (add small delay to ensure different timestamp)
+	time.Sleep(time.Millisecond)
 	created.Spec.Size = 100
 	created.Spec.Description = "Updated description"
 	updated, err := storage.Update(created)
@@ -144,7 +149,7 @@ func TestWidgetStorage_Update(t *testing.T) {
 	}
 
 	// ResourceVersion should be updated
-	if updated.ResourceVersion == created.ResourceVersion {
+	if updated.ResourceVersion == originalResourceVersion {
 		t.Error("ResourceVersion should be updated")
 	}
 
@@ -159,7 +164,7 @@ func TestWidgetStorage_Update(t *testing.T) {
 }
 
 func TestWidgetStorage_Delete(t *testing.T) {
-	storage := NewWidgetStorage()
+	storage := NewMemoryStorage()
 
 	// Test deleting non-existent widget
 	err := storage.Delete("non-existent")
@@ -196,7 +201,7 @@ func TestWidgetStorage_Delete(t *testing.T) {
 }
 
 func TestWidgetStorage_List(t *testing.T) {
-	storage := NewWidgetStorage()
+	storage := NewMemoryStorage()
 
 	// Test listing empty storage
 	list, err := storage.List()
@@ -242,7 +247,7 @@ func TestWidgetStorage_List(t *testing.T) {
 }
 
 func TestWidgetStorage_ThreadSafety(t *testing.T) {
-	storage := NewWidgetStorage()
+	storage := NewMemoryStorage()
 	const numGoroutines = 10
 	const numOperations = 100
 

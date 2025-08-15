@@ -62,13 +62,15 @@ func (wl *WidgetList) DeepCopyObject() runtime.Object {
 }
 
 type MemoryStorage struct {
-	mu      sync.RWMutex
-	widgets map[string]*Widget
+	mu              sync.RWMutex
+	widgets         map[string]*Widget
+	versionCounter  int64
 }
 
 func NewMemoryStorage() *MemoryStorage {
 	return &MemoryStorage{
-		widgets: make(map[string]*Widget),
+		widgets:        make(map[string]*Widget),
+		versionCounter: 1,
 	}
 }
 
@@ -116,7 +118,8 @@ func (s *MemoryStorage) Create(widget *Widget) (*Widget, error) {
 
 	now := metav1.NewTime(time.Now())
 	widget.CreationTimestamp = now
-	widget.ResourceVersion = "1"
+	widget.ResourceVersion = fmt.Sprintf("%d", s.versionCounter)
+	s.versionCounter++
 	widget.UID = uuid.NewUUID()
 	widget.Status.Phase = "Active"
 
@@ -135,7 +138,8 @@ func (s *MemoryStorage) Update(widget *Widget) (*Widget, error) {
 
 	widget.CreationTimestamp = existing.CreationTimestamp
 	widget.UID = existing.UID
-	widget.ResourceVersion = fmt.Sprintf("%d", time.Now().UnixNano())
+	widget.ResourceVersion = fmt.Sprintf("%d", s.versionCounter)
+	s.versionCounter++
 
 	s.widgets[widget.Name] = widget.DeepCopyObject().(*Widget)
 	return widget, nil

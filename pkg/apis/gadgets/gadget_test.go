@@ -3,6 +3,7 @@ package gadgets
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -138,7 +139,11 @@ func TestGadgetStorage_Update(t *testing.T) {
 		t.Fatalf("Failed to create gadget: %v", err)
 	}
 
-	// Update the gadget
+	// Store original ResourceVersion before update
+	originalResourceVersion := created.ResourceVersion
+
+	// Update the gadget (add small delay to ensure different timestamp)
+	time.Sleep(time.Millisecond)
 	created.Spec.Priority = 20
 	created.Spec.Version = "v2.0"
 	created.Spec.Enabled = false
@@ -160,7 +165,7 @@ func TestGadgetStorage_Update(t *testing.T) {
 	}
 
 	// ResourceVersion should be updated
-	if updated.ResourceVersion == created.ResourceVersion {
+	if updated.ResourceVersion == originalResourceVersion {
 		t.Error("ResourceVersion should be updated")
 	}
 
@@ -287,7 +292,7 @@ func TestGadgetStorage_ThreadSafety(t *testing.T) {
 				}
 			}
 			done <- true
-		}(id)
+		}(i)
 	}
 
 	// Wait for all goroutines to complete

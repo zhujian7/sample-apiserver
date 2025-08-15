@@ -63,13 +63,15 @@ func (gl *GadgetList) DeepCopyObject() runtime.Object {
 }
 
 type GadgetStorage struct {
-	mu      sync.RWMutex
-	gadgets map[string]*Gadget
+	mu              sync.RWMutex
+	gadgets         map[string]*Gadget
+	versionCounter  int64
 }
 
 func NewGadgetStorage() *GadgetStorage {
 	return &GadgetStorage{
-		gadgets: make(map[string]*Gadget),
+		gadgets:        make(map[string]*Gadget),
+		versionCounter: 1,
 	}
 }
 
@@ -117,7 +119,8 @@ func (s *GadgetStorage) Create(gadget *Gadget) (*Gadget, error) {
 
 	now := metav1.NewTime(time.Now())
 	gadget.CreationTimestamp = now
-	gadget.ResourceVersion = "1"
+	gadget.ResourceVersion = fmt.Sprintf("%d", s.versionCounter)
+	s.versionCounter++
 	gadget.UID = uuid.NewUUID()
 	gadget.Status.State = "Active"
 
@@ -136,7 +139,8 @@ func (s *GadgetStorage) Update(gadget *Gadget) (*Gadget, error) {
 
 	gadget.CreationTimestamp = existing.CreationTimestamp
 	gadget.UID = existing.UID
-	gadget.ResourceVersion = fmt.Sprintf("%d", time.Now().UnixNano())
+	gadget.ResourceVersion = fmt.Sprintf("%d", s.versionCounter)
+	s.versionCounter++
 
 	s.gadgets[gadget.Name] = gadget.DeepCopyObject().(*Gadget)
 	return gadget, nil

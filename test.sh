@@ -18,12 +18,13 @@ print_usage() {
 
 run_unit_tests() {
     echo "🧪 Running unit tests..."
-    go test -v ./pkg/... ./main_test.go -args -test.main
+    go test -v ./pkg/...
+    go test -v .
 }
 
 run_integration_tests() {
     echo "🔗 Running integration tests..."
-    go test -tags=integration -v ./integration_test.go -args -test.main
+    go test -tags=integration -v .
 }
 
 run_all_tests() {
