@@ -59,13 +59,14 @@ vet: ## Run go vet
 	@$(GOCMD) vet ./...
 
 .PHONY: lint
-lint: ## Run golangci-lint (requires golangci-lint to be installed)
+lint: ## Run golangci-lint using local binary
 	@echo "$(YELLOW)Running golangci-lint...$(NC)"
-	@if command -v golangci-lint >/dev/null 2>&1; then \
-		golangci-lint run; \
-	else \
-		echo "$(RED)golangci-lint not found. Install it with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest$(NC)"; \
+	@if [ ! -f ./bin/golangci-lint ]; then \
+		echo "$(YELLOW)Installing golangci-lint...$(NC)"; \
+		mkdir -p bin; \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./bin latest; \
 	fi
+	@./bin/golangci-lint run --config .golangci.yml
 
 .PHONY: deps
 deps: ## Download dependencies
