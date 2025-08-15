@@ -1,19 +1,24 @@
 package main
 
 import (
+	"context"
+
 	"github.com/spf13/pflag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apiserver/pkg/endpoints/openapi"
 	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
+	basecompatibility "k8s.io/component-base/compatibility"
 	"k8s.io/klog/v2"
+	"k8s.io/kube-openapi/pkg/common"
 
 	"example.com/mytest-apiserver/pkg/apis/gadgets"
 	"example.com/mytest-apiserver/pkg/apis/widgets"
-	"example.com/mytest-apiserver/pkg/common"
+	mycommon "example.com/mytest-apiserver/pkg/common"
 )
 
 var (
@@ -22,7 +27,7 @@ var (
 )
 
 func init() {
-	gv := schema.GroupVersion{Group: common.GroupName, Version: common.APIVersion}
+	gv := schema.GroupVersion{Group: mycommon.GroupName, Version: mycommon.APIVersion}
 	Scheme.AddKnownTypes(gv, &widgets.Widget{}, &widgets.WidgetList{}, &gadgets.Gadget{}, &gadgets.GadgetList{})
 	metav1.AddToGroupVersion(Scheme, gv)
 
@@ -30,12 +35,17 @@ func init() {
 	metav1.AddToGroupVersion(Scheme, schema.GroupVersion{Version: "v1"})
 }
 
+// GetOpenAPIDefinitions provides OpenAPI definitions for our custom resources
+func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
+	return map[string]common.OpenAPIDefinition{}
+}
+
 func installAPI(s *genericapiserver.GenericAPIServer) error {
 	widgetREST := widgets.NewWidgetREST()
 	gadgetREST := gadgets.NewGadgetREST()
 
-	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(common.GroupName, Scheme, metav1.ParameterCodec, Codecs)
-	apiGroupInfo.VersionedResourcesStorageMap[common.APIVersion] = map[string]rest.Storage{
+	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(mycommon.GroupName, Scheme, metav1.ParameterCodec, Codecs)
+	apiGroupInfo.VersionedResourcesStorageMap[mycommon.APIVersion] = map[string]rest.Storage{
 		"widgets": widgetREST,
 		"gadgets": gadgetREST,
 	}
@@ -51,8 +61,8 @@ type MyAPIServer struct {
 	GenericAPIServer *genericapiserver.GenericAPIServer
 }
 
-func (s *MyAPIServer) Run(stopCh <-chan struct{}) error {
-	return s.GenericAPIServer.PrepareRun().Run(stopCh)
+func (s *MyAPIServer) Run(ctx context.Context) error {
+	return s.GenericAPIServer.PrepareRun().RunWithContext(ctx)
 }
 
 func NewConfig() *Config {
@@ -62,7 +72,13 @@ func NewConfig() *Config {
 }
 
 func (c *Config) Complete() *Config {
-	c.GenericConfig.Complete()
+	c.GenericConfig.EffectiveVersion = basecompatibility.NewEffectiveVersionFromString("1.30.0", "", "")
+
+	// Configure OpenAPI
+	defNamer := openapi.NewDefinitionNamer(Scheme)
+	c.GenericConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(GetOpenAPIDefinitions, defNamer)
+	c.GenericConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(GetOpenAPIDefinitions, defNamer)
+
 	return c
 }
 
@@ -85,8 +101,6 @@ func (c *Config) New() (*MyAPIServer, error) {
 
 func main() {
 	klog.InitFlags(nil)
-
-	stopCh := genericapiserver.SetupSignalHandler()
 
 	options := genericoptions.NewRecommendedOptions("", Codecs.LegacyCodec())
 
@@ -117,8 +131,9 @@ func main() {
 		klog.Fatalf("Error creating server: %v", err)
 	}
 
+	ctx := context.Background()
 	klog.Infof("Starting my-apiserver...")
-	if err := server.Run(stopCh); err != nil {
+	if err := server.Run(ctx); err != nil {
 		klog.Fatalf("Error running server: %v", err)
 	}
 }

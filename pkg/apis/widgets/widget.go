@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -80,7 +81,7 @@ func (s *MemoryStorage) Get(name string) (*Widget, error) {
 
 	widget, exists := s.widgets[name]
 	if !exists {
-		return nil, fmt.Errorf("widget %s not found", name)
+		return nil, errors.NewNotFound(schema.GroupResource{Group: common.GroupName, Resource: "widgets"}, name)
 	}
 	return widget.DeepCopyObject().(*Widget), nil
 }
@@ -133,7 +134,7 @@ func (s *MemoryStorage) Update(widget *Widget) (*Widget, error) {
 
 	existing, exists := s.widgets[widget.Name]
 	if !exists {
-		return nil, fmt.Errorf("widget %s not found", widget.Name)
+		return nil, errors.NewNotFound(schema.GroupResource{Group: common.GroupName, Resource: "widgets"}, widget.Name)
 	}
 
 	widget.CreationTimestamp = existing.CreationTimestamp
@@ -150,7 +151,7 @@ func (s *MemoryStorage) Delete(name string) error {
 	defer s.mu.Unlock()
 
 	if _, exists := s.widgets[name]; !exists {
-		return fmt.Errorf("widget %s not found", name)
+		return errors.NewNotFound(schema.GroupResource{Group: common.GroupName, Resource: "widgets"}, name)
 	}
 
 	delete(s.widgets, name)
