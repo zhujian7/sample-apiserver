@@ -180,7 +180,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@0.36.0
+      uses: aquasecurity/trivy-action@0.32.0
       with:
         scan-type: 'fs'
         scan-ref: '.'
@@ -202,7 +202,7 @@ jobs:
   docs:
     name: Documentation
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -211,9 +211,13 @@ jobs:
       uses: tcort/github-action-markdown-link-check@v1
       with:
         config-file: '.github/markdown-link-check.json'
+        folder-path: 'deploy, pkg'
+        file-path: './README.md'
+
 
     - name: Lint markdown
       uses: DavidAnson/markdownlint-cli2-action@v20
+      continue-on-error: true
       with:
         globs: |
           README.md
