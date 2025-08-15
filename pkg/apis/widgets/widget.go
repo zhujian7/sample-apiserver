@@ -191,7 +191,8 @@ func (r *WidgetREST) List(ctx context.Context, options *internalversion.ListOpti
 	return r.storage.List()
 }
 
-func (r *WidgetREST) Create(ctx context.Context, obj runtime.Object, createValidation rest.ValidateObjectFunc, options *metav1.CreateOptions) (runtime.Object, error) {
+func (r *WidgetREST) Create(ctx context.Context, obj runtime.Object, createValidation rest.ValidateObjectFunc,
+	options *metav1.CreateOptions) (runtime.Object, error) {
 	widget := obj.(*Widget)
 	widget.TypeMeta = metav1.TypeMeta{
 		APIVersion: common.GroupName + "/" + common.APIVersion,
@@ -200,7 +201,9 @@ func (r *WidgetREST) Create(ctx context.Context, obj runtime.Object, createValid
 	return r.storage.Create(widget)
 }
 
-func (r *WidgetREST) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc, forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
+func (r *WidgetREST) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo,
+	createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc,
+	forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
 	oldObj, err := r.storage.Get(name)
 	if err != nil {
 		return nil, false, err
@@ -217,7 +220,8 @@ func (r *WidgetREST) Update(ctx context.Context, name string, objInfo rest.Updat
 	return updatedWidget, false, err
 }
 
-func (r *WidgetREST) Delete(ctx context.Context, name string, deleteValidation rest.ValidateObjectFunc, options *metav1.DeleteOptions) (runtime.Object, bool, error) {
+func (r *WidgetREST) Delete(ctx context.Context, name string, deleteValidation rest.ValidateObjectFunc,
+	options *metav1.DeleteOptions) (runtime.Object, bool, error) {
 	obj, err := r.storage.Get(name)
 	if err != nil {
 		return nil, false, err
@@ -231,8 +235,10 @@ func (r *WidgetREST) Watch(ctx context.Context, options *metav1.ListOptions) (wa
 	return nil, fmt.Errorf("watch not implemented")
 }
 
-func (r *WidgetREST) ConvertToTable(ctx context.Context, object runtime.Object, tableOptions runtime.Object) (*metav1.Table, error) {
-	return rest.NewDefaultTableConvertor(schema.GroupResource{Group: common.GroupName, Resource: "widgets"}).ConvertToTable(ctx, object, tableOptions)
+func (r *WidgetREST) ConvertToTable(ctx context.Context, object runtime.Object,
+	tableOptions runtime.Object) (*metav1.Table, error) {
+	return rest.NewDefaultTableConvertor(schema.GroupResource{Group: common.GroupName, Resource: "widgets"}).
+		ConvertToTable(ctx, object, tableOptions)
 }
 
 func (r *WidgetREST) NamespaceScoped() bool {

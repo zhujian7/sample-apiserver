@@ -66,7 +66,7 @@ lint: ## Run golangci-lint using local binary
 		mkdir -p bin; \
 		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./bin latest; \
 	fi
-	@./bin/golangci-lint run --config .golangci.yml
+	@./bin/golangci-lint run --config .golangci.yml --tests=false
 
 .PHONY: deps
 deps: ## Download dependencies

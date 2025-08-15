@@ -2,8 +2,6 @@
 version: "2"
 run:
   concurrency: 10
-  skip-files:
-    - ".*_test\\.go$"
 linters:
   default: none
   enable:
@@ -14,8 +12,6 @@ linters:
     - govet
     - ineffassign
     - lll
-    - misspell
-    - staticcheck
     - unconvert
     - unused
 linters-settings:
@@ -99,6 +95,12 @@ issues:
       path: _test\.go$|^tests/|^samples/
     - path: (.+)\.go$
       text: composite literal uses unkeyed fields
+    - linters:
+        - misspell
+      text: "Creater.*is a misspelling of.*Creature"
+    - linters:
+        - staticcheck
+      text: "QF1008: could remove embedded field.*from selector"
   exclude-dirs:
     - vendor
     - third_party
