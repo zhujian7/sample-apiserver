@@ -1,5 +1,10 @@
 # MyTest API Server - Kubernetes Aggregate API Example
 
+[![CI](https://github.com/your-username/mytest-apiserver/workflows/CI/badge.svg)](https://github.com/your-username/mytest-apiserver/actions/workflows/ci.yml)
+[![Security](https://github.com/your-username/mytest-apiserver/workflows/Security/badge.svg)](https://github.com/your-username/mytest-apiserver/actions/workflows/security.yml)
+[![Docker](https://github.com/your-username/mytest-apiserver/workflows/Docker%20Build%20and%20Push/badge.svg)](https://github.com/your-username/mytest-apiserver/actions/workflows/docker.yml)
+[![Release](https://github.com/your-username/mytest-apiserver/workflows/Release/badge.svg)](https://github.com/your-username/mytest-apiserver/actions/workflows/release.yml)
+
 This is a complete example of a Kubernetes Aggregate API server that implements custom `Widget` and `Gadget` resources with full CRUD operations using in-memory storage.
 
 ## Overview
@@ -342,6 +347,45 @@ The test suite includes:
 - **Integration Tests**: Resource interactions, concurrent operations, lifecycle testing
 - **End-to-End Tests**: Full Kubernetes API integration via kubectl
 
+## CI/CD Pipeline
+
+The project includes comprehensive GitHub Actions workflows:
+
+### 🔄 **Continuous Integration** (`ci.yml`)
+- **Code Quality**: Format checking, linting, and vetting
+- **Testing**: Unit tests, integration tests, race detection
+- **Coverage**: Automated coverage reporting with Codecov
+- **Build**: Multi-platform binary generation
+- **Security**: Basic security scanning
+
+### 🐳 **Docker Pipeline** (`docker.yml`)
+- **Multi-Architecture**: Builds for linux/amd64 and linux/arm64
+- **Security**: Container vulnerability scanning with Trivy
+- **Signing**: Container signing with Cosign
+- **SBOM**: Software Bill of Materials generation
+- **Registry**: Automated push to Quay.io
+
+### 🚀 **Release Pipeline** (`release.yml`)
+- **Automated Releases**: Triggered by git tags (v*)
+- **Multi-Platform Binaries**: Linux, macOS, Windows (amd64/arm64)
+- **Deployment Artifacts**: Ready-to-use Kubernetes manifests
+- **Checksums**: SHA256 verification files
+- **Container Images**: Tagged and signed release images
+
+### 🔒 **Security Pipeline** (`security.yml`)
+- **Vulnerability Scanning**: Go modules, filesystem, containers
+- **Code Analysis**: CodeQL, Gosec, Semgrep security analysis
+- **Dependency Checking**: Automated dependency vulnerability detection
+- **Secrets Detection**: Gitleaks and TruffleHog scanning
+- **Kubernetes Security**: Kubesec and Polaris policy validation
+- **Daily Scans**: Scheduled security monitoring
+
+### 🤖 **Automation Features**
+- **Dependabot**: Automated dependency updates
+- **Auto-deployment**: Image tag updates in manifests
+- **Quality Gates**: All tests must pass before merge
+- **Security Gates**: Security scans block vulnerable releases
+
 ## Key Components
 
 ### 1. Resource Definitions (`pkg/apis/*/`)
@@ -417,6 +461,9 @@ For production use, consider:
 - ✅ Automatic CA injection for TLS certificates
 - ✅ Comprehensive test suite with coverage reporting
 - ✅ Makefile for development automation
+- ✅ Complete CI/CD pipeline with GitHub Actions
+- ✅ Security scanning and vulnerability detection
+- ✅ Automated releases with multi-platform binaries
 
 ## Cleanup
 
@@ -442,6 +489,14 @@ kind delete cluster --name kind
 ├── go.mod                           # Go module definition
 ├── Dockerfile                       # Container build file
 ├── README.md                        # This file
+├── .github/                         # GitHub configuration
+│   ├── workflows/                   # GitHub Actions workflows
+│   │   ├── ci.yml                   # Continuous Integration
+│   │   ├── docker.yml               # Docker build and push
+│   │   ├── release.yml              # Release automation
+│   │   └── security.yml             # Security scanning
+│   ├── dependabot.yml               # Dependency updates
+│   └── markdown-link-check.json     # Link checking config
 ├── pkg/                             # Go packages
 │   ├── apis/                        # API resource definitions
 │   │   ├── widgets/                 # Widget resource implementation

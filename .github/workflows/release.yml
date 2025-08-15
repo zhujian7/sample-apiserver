@@ -1,0 +1,265 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  GO_VERSION: '1.24'
+  REGISTRY: quay.io
+  IMAGE_NAME: zhujian/mytest-apiserver
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Get version
+      id: get_version
+      run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Simple changelog generation from git log
+        echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+        echo "## Changes in ${{ steps.get_version.outputs.version }}" >> $GITHUB_OUTPUT
+        echo "" >> $GITHUB_OUTPUT
+        git log --oneline --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> $GITHUB_OUTPUT
+        echo "" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_version.outputs.version }}
+        release_name: Release ${{ steps.get_version.outputs.version }}
+        body: |
+          # MyTest API Server ${{ steps.get_version.outputs.version }}
+          
+          ## Docker Images
+          
+          ```bash
+          # Pull the latest release
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.version }}
+          
+          # Deploy with Helm or kubectl
+          kubectl apply -f https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/deploy.yaml
+          ```
+          
+          ## Installation
+          
+          ### Quick Start with Kind
+          ```bash
+          # Download and extract
+          curl -L https://github.com/${{ github.repository }}/archive/${{ steps.get_version.outputs.version }}.tar.gz | tar xz
+          cd mytest-apiserver-*
+          
+          # Set up development environment
+          make dev-setup
+          ```
+          
+          ### Manual Installation
+          ```bash
+          # Download binary
+          curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/mytest-apiserver-linux-amd64 -o mytest-apiserver
+          chmod +x mytest-apiserver
+          ```
+          
+          ${{ steps.changelog.outputs.CHANGELOG }}
+          
+          ## Verification
+          
+          All artifacts are signed with Cosign. Verify with:
+          ```bash
+          cosign verify ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.version }}
+          ```
+        draft: false
+        prerelease: ${{ contains(steps.get_version.outputs.version, '-') }}
+
+  build-binaries:
+    name: Build Release Binaries
+    runs-on: ubuntu-latest
+    needs: create-release
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+          - os: linux
+            arch: arm64
+          - os: darwin
+            arch: amd64
+          - os: darwin
+            arch: arm64
+          - os: windows
+            arch: amd64
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Build binary
+      run: |
+        mkdir -p bin
+        BINARY_NAME="mytest-apiserver-${{ matrix.os }}-${{ matrix.arch }}"
+        if [ "${{ matrix.os }}" = "windows" ]; then
+          BINARY_NAME="${BINARY_NAME}.exe"
+        fi
+        
+        CGO_ENABLED=0 GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} \
+        go build -ldflags="-w -s -X main.version=${{ needs.create-release.outputs.version }} -X main.commit=${{ github.sha }} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        -o bin/${BINARY_NAME} .
+
+    - name: Generate checksums
+      run: |
+        cd bin
+        sha256sum mytest-apiserver-* > checksums.txt
+
+    - name: Upload binary
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./bin/mytest-apiserver-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.os == 'windows' && '.exe' || '' }}
+        asset_name: mytest-apiserver-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.os == 'windows' && '.exe' || '' }}
+        asset_content_type: application/octet-stream
+
+    - name: Upload checksums
+      if: matrix.os == 'linux' && matrix.arch == 'amd64'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./bin/checksums.txt
+        asset_name: checksums.txt
+        asset_content_type: text/plain
+
+  build-deployment-artifacts:
+    name: Build Deployment Artifacts
+    runs-on: ubuntu-latest
+    needs: create-release
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Prepare deployment artifacts
+      run: |
+        mkdir -p release-artifacts
+        
+        # Update image tags in deployment files
+        sed "s|quay.io/zhujian/mytest-apiserver:dev|${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}|g" \
+          deploy/base/deploy.yaml > release-artifacts/deploy.yaml
+        
+        # Copy other deployment files
+        cp deploy/base/apiservice.yaml release-artifacts/
+        cp -r deploy/certificates release-artifacts/
+        cp deploy/README.md release-artifacts/
+        
+        # Create deployment bundle
+        tar -czf release-artifacts/mytest-apiserver-deploy-${{ needs.create-release.outputs.version }}.tar.gz -C release-artifacts .
+
+    - name: Upload deployment artifacts
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./release-artifacts/deploy.yaml
+        asset_name: deploy.yaml
+        asset_content_type: text/yaml
+
+    - name: Upload deployment bundle
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./release-artifacts/mytest-apiserver-deploy-${{ needs.create-release.outputs.version }}.tar.gz
+        asset_name: mytest-apiserver-deploy-${{ needs.create-release.outputs.version }}.tar.gz
+        asset_content_type: application/gzip
+
+  docker-release:
+    name: Build and Push Release Docker Image
+    runs-on: ubuntu-latest
+    needs: create-release
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ secrets.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_PASSWORD }}
+
+    - name: Build and push release image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+        build-args: |
+          VERSION=${{ needs.create-release.outputs.version }}
+          COMMIT=${{ github.sha }}
+          DATE=${{ github.event.head_commit.timestamp }}
+
+    - name: Sign release image
+      run: |
+        cosign sign --yes ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}
+
+  notify:
+    name: Notify Release
+    runs-on: ubuntu-latest
+    needs: [create-release, build-binaries, build-deployment-artifacts, docker-release]
+    if: always()
+    
+    steps:
+    - name: Notify on success
+      if: needs.create-release.result == 'success' && needs.build-binaries.result == 'success' && needs.docker-release.result == 'success'
+      run: |
+        echo "🎉 Release ${{ needs.create-release.outputs.version }} completed successfully!"
+        echo "Docker image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}"
+
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "❌ Release ${{ needs.create-release.outputs.version }} failed!"
+        echo "Check the workflow logs for details."

@@ -1,0 +1,36 @@
+# Markdownlint configuration
+# See https://github.com/DavidAnson/markdownlint/blob/main/schema/.markdownlint.yaml
+
+# Default state for all rules
+default: true
+
+# MD013 - Line length
+MD013:
+  # Line length
+  line_length: 120
+  # Number of characters for headings
+  heading_line_length: 80
+  # Number of characters for code blocks
+  code_block_line_length: 120
+  # Include code blocks
+  code_blocks: true
+  # Include tables
+  tables: true
+  # Include headings
+  headings: true
+  # Include headings
+  headers: true
+  # Strict length checking
+  strict: false
+  # Stern length checking
+  stern: false
+
+# MD033 - Inline HTML
+MD033:
+  # Allowed elements
+  allowed_elements: ["br", "sub", "sup"]
+
+# MD046 - Code block style
+MD046:
+  # Block style
+  style: "fenced"
