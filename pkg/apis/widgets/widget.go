@@ -62,9 +62,9 @@ func (wl *WidgetList) DeepCopyObject() runtime.Object {
 }
 
 type MemoryStorage struct {
-	mu              sync.RWMutex
-	widgets         map[string]*Widget
-	versionCounter  int64
+	mu             sync.RWMutex
+	widgets        map[string]*Widget
+	versionCounter int64
 }
 
 func NewMemoryStorage() *MemoryStorage {

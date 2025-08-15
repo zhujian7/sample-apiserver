@@ -63,9 +63,9 @@ func (gl *GadgetList) DeepCopyObject() runtime.Object {
 }
 
 type GadgetStorage struct {
-	mu              sync.RWMutex
-	gadgets         map[string]*Gadget
-	versionCounter  int64
+	mu             sync.RWMutex
+	gadgets        map[string]*Gadget
+	versionCounter int64
 }
 
 func NewGadgetStorage() *GadgetStorage {
