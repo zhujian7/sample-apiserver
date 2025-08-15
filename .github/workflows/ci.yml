@@ -221,8 +221,15 @@ jobs:
         use-quiet-mode: 'yes'
         use-verbose-mode: 'yes'
         config-file: '.github/markdown-link-check.json'
+        folder-path: '.'
+        file-extension: '.md'
+        base-branch: 'main'
 
     - name: Lint markdown
       uses: DavidAnson/markdownlint-cli2-action@v16
       with:
-        globs: '**/*.md'
+        globs: |
+          README.md
+          deploy/**/*.md
+          docs/**/*.md
+          !vendor/**

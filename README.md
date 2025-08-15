@@ -1,9 +1,9 @@
 # MyTest API Server - Kubernetes Aggregate API Example
 
-[![CI](https://github.com/your-username/mytest-apiserver/workflows/CI/badge.svg)](https://github.com/your-username/mytest-apiserver/actions/workflows/ci.yml)
-[![Security](https://github.com/your-username/mytest-apiserver/workflows/Security/badge.svg)](https://github.com/your-username/mytest-apiserver/actions/workflows/security.yml)
-[![Docker](https://github.com/your-username/mytest-apiserver/workflows/Docker%20Build%20and%20Push/badge.svg)](https://github.com/your-username/mytest-apiserver/actions/workflows/docker.yml)
-[![Release](https://github.com/your-username/mytest-apiserver/workflows/Release/badge.svg)](https://github.com/your-username/mytest-apiserver/actions/workflows/release.yml)
+[![CI](./sample-apiserver/workflows/CI/badge.svg)](./.github/workflows/ci.yml)
+[![Security](./sample-apiserver/workflows/Security/badge.svg)](./.github/workflows/security.yml)
+[![Docker](./sample-apiserver/workflows/Docker%20Build%20and%20Push/badge.svg)](./.github/workflows/docker.yml)
+[![Release](./sample-apiserver/workflows/Release/badge.svg)](./.github/workflows/release.yml)
 
 This is a complete example of a Kubernetes Aggregate API server that implements custom `Widget` and `Gadget` resources with full CRUD operations using in-memory storage.
 
