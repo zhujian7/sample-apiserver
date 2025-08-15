@@ -15,6 +15,31 @@ updates:
     commit-message:
       prefix: "chore(deps)"
       include: "scope"
+    groups:
+      k8s.io:
+        patterns:
+          - "k8s.io/*"
+          - "sigs.k8s.io/*"
+      go.opentelemetry.io:
+        patterns:
+          - "go.opentelemetry.io/*"
+      golang.org:
+        patterns:
+          - "golang.org/*"
+      google:
+        patterns:
+          - "google.golang.org/*"
+          - "github.com/google/*"
+          - "github.com/googleapis/*"
+      etcd:
+        patterns:
+          - "go.etcd.io/*"
+      prometheus:
+        patterns:
+          - "github.com/prometheus/*"
+      uber:
+        patterns:
+          - "go.uber.org/*"
 
   # Enable version updates for GitHub Actions
   - package-ecosystem: "github-actions"
