@@ -18,28 +18,46 @@ import (
 	"example.com/mytest-apiserver/pkg/common"
 )
 
+// Gadget represents a sample gadget resource
 type Gadget struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              GadgetSpec   `json:"spec,omitempty"`
-	Status            GadgetStatus `json:"status,omitempty"`
+
+	// Spec defines the desired state of Gadget
+	Spec GadgetSpec `json:"spec,omitempty"`
+
+	// Status defines the observed state of Gadget
+	Status GadgetStatus `json:"status,omitempty"`
 }
 
+// GadgetSpec defines the desired state of Gadget
 type GadgetSpec struct {
-	Type     string `json:"type"`
-	Version  string `json:"version"`
-	Enabled  bool   `json:"enabled"`
-	Priority int32  `json:"priority"`
+	// Type specifies the type of gadget
+	Type string `json:"type"`
+
+	// Version specifies the version of the gadget
+	Version string `json:"version"`
+
+	// Enabled indicates whether the gadget is enabled
+	Enabled bool `json:"enabled"`
+
+	// Priority sets the priority of the gadget
+	Priority int32 `json:"priority"`
 }
 
+// GadgetStatus defines the observed state of Gadget
 type GadgetStatus struct {
+	// State indicates the current state of the gadget
 	State string `json:"state,omitempty"`
 }
 
+// GadgetList contains a list of Gadget
 type GadgetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Gadget `json:"items"`
+
+	// Items is the list of Gadget objects
+	Items []Gadget `json:"items"`
 }
 
 func (g *Gadget) DeepCopyObject() runtime.Object {

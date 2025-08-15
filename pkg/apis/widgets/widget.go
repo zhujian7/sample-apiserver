@@ -18,27 +18,43 @@ import (
 	"example.com/mytest-apiserver/pkg/common"
 )
 
+// Widget represents a sample widget resource
 type Widget struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              WidgetSpec   `json:"spec,omitempty"`
-	Status            WidgetStatus `json:"status,omitempty"`
+
+	// Spec defines the desired state of Widget
+	Spec WidgetSpec `json:"spec,omitempty"`
+
+	// Status defines the observed state of Widget
+	Status WidgetStatus `json:"status,omitempty"`
 }
 
+// WidgetSpec defines the desired state of Widget
 type WidgetSpec struct {
-	Name        string `json:"name"`
+	// Name is the name of the widget
+	Name string `json:"name"`
+
+	// Description describes what the widget does
 	Description string `json:"description"`
-	Size        int32  `json:"size"`
+
+	// Size indicates the size of the widget
+	Size int32 `json:"size"`
 }
 
+// WidgetStatus defines the observed state of Widget
 type WidgetStatus struct {
+	// Phase indicates the current phase of the widget
 	Phase string `json:"phase,omitempty"`
 }
 
+// WidgetList contains a list of Widget
 type WidgetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Widget `json:"items"`
+
+	// Items is the list of Widget objects
+	Items []Widget `json:"items"`
 }
 
 func (w *Widget) DeepCopyObject() runtime.Object {

@@ -53,6 +53,11 @@ fmt: ## Format Go code
 	@echo "$(YELLOW)Formatting Go code...$(NC)"
 	@$(GOFMT) ./...
 
+.PHONY: generate
+generate: ## Generate code (OpenAPI, etc.)
+	@echo "$(YELLOW)Generating code...$(NC)"
+	@./hack/update-openapi.sh
+
 .PHONY: vet
 vet: ## Run go vet
 	@echo "$(YELLOW)Running go vet...$(NC)"

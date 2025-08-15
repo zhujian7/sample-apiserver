@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 
+	"example.com/mytest-apiserver/pkg/apis/gadgets"
+	"example.com/mytest-apiserver/pkg/apis/widgets"
+	mycommon "example.com/mytest-apiserver/pkg/common"
+	generatedopenapi "example.com/mytest-apiserver/pkg/generated/openapi"
 	"github.com/spf13/pflag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,11 +18,6 @@ import (
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	basecompatibility "k8s.io/component-base/compatibility"
 	"k8s.io/klog/v2"
-	"k8s.io/kube-openapi/pkg/common"
-
-	"example.com/mytest-apiserver/pkg/apis/gadgets"
-	"example.com/mytest-apiserver/pkg/apis/widgets"
-	mycommon "example.com/mytest-apiserver/pkg/common"
 )
 
 var (
@@ -33,11 +32,6 @@ func init() {
 
 	// Register meta types
 	metav1.AddToGroupVersion(Scheme, schema.GroupVersion{Version: "v1"})
-}
-
-// GetOpenAPIDefinitions provides OpenAPI definitions for our custom resources
-func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
-	return map[string]common.OpenAPIDefinition{}
 }
 
 func installAPI(s *genericapiserver.GenericAPIServer) error {
@@ -74,10 +68,12 @@ func NewConfig() *Config {
 func (c *Config) Complete() *Config {
 	c.GenericConfig.EffectiveVersion = basecompatibility.NewEffectiveVersionFromString("1.30.0", "", "")
 
-	// Configure OpenAPI
+	// Configure OpenAPI with generated definitions (includes standard types)
 	defNamer := openapi.NewDefinitionNamer(Scheme)
-	c.GenericConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(GetOpenAPIDefinitions, defNamer)
-	c.GenericConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(GetOpenAPIDefinitions, defNamer)
+	c.GenericConfig.OpenAPIConfig = genericapiserver.
+		DefaultOpenAPIConfig(generatedopenapi.GetOpenAPIDefinitions, defNamer)
+	c.GenericConfig.OpenAPIV3Config = genericapiserver.
+		DefaultOpenAPIV3Config(generatedopenapi.GetOpenAPIDefinitions, defNamer)
 
 	return c
 }
