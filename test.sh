@@ -48,9 +48,21 @@ run_coverage() {
     echo "Integration test coverage..."
     go test -tags=integration -coverprofile=coverage/integration.out -v ./integration_test.go
     
-    # Combine coverage reports
+    # Combine coverage reports manually since gocovmerge is not in vendor
     echo "Combining coverage reports..."
-    go run github.com/wadey/gocovmerge coverage/unit.out coverage/integration.out > coverage/combined.out
+    if [ -f coverage/unit.out ] && [ -f coverage/integration.out ]; then
+        # Use a simple combination approach
+        head -1 coverage/unit.out > coverage/combined.out
+        tail -n +2 coverage/unit.out >> coverage/combined.out
+        tail -n +2 coverage/integration.out >> coverage/combined.out
+    elif [ -f coverage/unit.out ]; then
+        cp coverage/unit.out coverage/combined.out
+    elif [ -f coverage/integration.out ]; then
+        cp coverage/integration.out coverage/combined.out
+    else
+        echo "No coverage files found"
+        exit 1
+    fi
     
     # Generate HTML report
     go tool cover -html=coverage/combined.out -o coverage/report.html
