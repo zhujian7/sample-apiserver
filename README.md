@@ -80,7 +80,20 @@ Once deployed, the API server exposes these endpoints:
 
 ## Quick Start
 
-### Option 1: Kind Cluster (Recommended for testing)
+### Option 1: Using Makefile (Recommended)
+
+```bash
+# Set up complete development environment
+make dev-setup
+
+# Run quick end-to-end test
+make quick-test
+
+# Clean up when done
+make dev-teardown
+```
+
+### Option 2: Kind Cluster (Manual setup)
 
 1. **Set up Kind cluster with cert-manager**:
    ```bash
@@ -98,7 +111,7 @@ Once deployed, the API server exposes these endpoints:
    kubectl get pods -n my-apiserver-system
    ```
 
-### Option 2: Existing Kubernetes Cluster
+### Option 3: Existing Kubernetes Cluster
 
 1. **Prerequisites**: Ensure cert-manager is installed
    ```bash
@@ -110,16 +123,50 @@ Once deployed, the API server exposes these endpoints:
    ./deploy/deploy.sh install
    ```
 
-## Building and Running
+## Development Commands
+
+### Common Makefile Targets
+
+```bash
+# Show all available commands
+make help
+
+# Development workflow
+make dev-setup          # Set up complete dev environment
+make dev-restart         # Rebuild and redeploy
+make dev-teardown        # Clean up everything
+
+# Building
+make build               # Build binary
+make docker-build        # Build Docker image
+make release-build       # Build release artifacts
+
+# Testing
+make test                # Run all tests
+make test-unit           # Run unit tests only
+make test-coverage       # Run with coverage report
+make quick-test          # Quick end-to-end test
+
+# Deployment
+make deploy              # Deploy to Kubernetes
+make status              # Check deployment status
+make logs                # Show API server logs
+```
+
+### Manual Building
 
 1. **Build the server**:
    ```bash
    go build -o mytest-apiserver .
+   # or
+   make build
    ```
 
 2. **Build Docker image**:
    ```bash
    docker build -t quay.io/zhujian/mytest-apiserver:dev .
+   # or
+   make docker-build
    ```
 
 ## CRUD Examples
@@ -219,12 +266,42 @@ kubectl delete gadget test-gadget -n default
 
 ## Testing
 
-### Unit Tests
+### Quick Test Commands
+
 ```bash
-go test -v
+# Run all tests
+./test.sh
+
+# Run only unit tests
+./test.sh unit
+
+# Run only integration tests
+./test.sh integration
+
+# Run tests with coverage report
+./test.sh coverage
 ```
 
-### Integration Testing
+### Manual Testing Options
+
+#### Unit Tests
+```bash
+# Test individual packages
+go test -v ./pkg/apis/widgets/
+go test -v ./pkg/apis/gadgets/
+go test -v ./main_test.go
+
+# Run with race detection
+go test -race -v ./pkg/...
+```
+
+#### Integration Tests
+```bash
+# Run integration tests (requires build tag)
+go test -tags=integration -v ./integration_test.go
+```
+
+#### End-to-End Testing
 After deploying to Kind cluster, test the full workflow:
 ```bash
 # Test Widget operations
@@ -257,6 +334,13 @@ EOF
 # Verify resources
 kubectl get widgets,gadgets
 ```
+
+### Test Coverage
+
+The test suite includes:
+- **Unit Tests**: Storage operations, CRUD functionality, thread safety
+- **Integration Tests**: Resource interactions, concurrent operations, lifecycle testing
+- **End-to-End Tests**: Full Kubernetes API integration via kubectl
 
 ## Key Components
 
@@ -331,6 +415,8 @@ For production use, consider:
 - ✅ Modular package structure
 - ✅ Kind cluster setup for easy testing
 - ✅ Automatic CA injection for TLS certificates
+- ✅ Comprehensive test suite with coverage reporting
+- ✅ Makefile for development automation
 
 ## Cleanup
 
@@ -349,25 +435,33 @@ kind delete cluster --name kind
 ```
 .
 ├── main.go                          # API server main entry point
+├── main_test.go                     # Main package unit tests
+├── integration_test.go              # Integration tests
+├── test.sh                          # Test runner script
+├── Makefile                         # Build and development automation
 ├── go.mod                           # Go module definition
 ├── Dockerfile                       # Container build file
 ├── README.md                        # This file
-├── pkg/                            # Go packages
-│   ├── apis/                       # API resource definitions
-│   │   ├── widgets/                # Widget resource implementation
-│   │   └── gadgets/                # Gadget resource implementation
-│   └── common/                     # Shared constants and utilities
-└── deploy/                         # Deployment manifests
-    ├── deploy.sh                   # Automated deployment script
-    ├── README.md                   # Deployment documentation
-    ├── base/                       # Core Kubernetes manifests
-    │   ├── deploy.yaml            # RBAC, Deployment, Service
-    │   └── apiservice.yaml        # API registration
-    ├── certificates/               # TLS certificate setup
-    │   ├── ca.yaml               # Certificate Authority
-    │   ├── issuer.yaml           # cert-manager Issuer
-    │   └── cert.yaml             # API server certificate
-    └── kind/                       # Kind cluster setup
-        ├── cluster-config.yaml    # Kind cluster configuration
-        └── setup.sh              # Automated Kind setup
+├── pkg/                             # Go packages
+│   ├── apis/                        # API resource definitions
+│   │   ├── widgets/                 # Widget resource implementation
+│   │   │   ├── widget.go            # Widget types and storage
+│   │   │   └── widget_test.go       # Widget unit tests
+│   │   └── gadgets/                 # Gadget resource implementation
+│   │       ├── gadget.go            # Gadget types and storage
+│   │       └── gadget_test.go       # Gadget unit tests
+│   └── common/                      # Shared constants and utilities
+└── deploy/                          # Deployment manifests
+    ├── deploy.sh                    # Automated deployment script
+    ├── README.md                    # Deployment documentation
+    ├── base/                        # Core Kubernetes manifests
+    │   ├── deploy.yaml              # RBAC, Deployment, Service
+    │   └── apiservice.yaml          # API registration
+    ├── certificates/                # TLS certificate setup
+    │   ├── ca.yaml                  # Certificate Authority
+    │   ├── issuer.yaml              # cert-manager Issuer
+    │   └── cert.yaml                # API server certificate
+    └── kind/                        # Kind cluster setup
+        ├── cluster-config.yaml      # Kind cluster configuration
+        └── setup.sh                 # Automated Kind setup
 ```
