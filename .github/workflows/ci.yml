@@ -218,7 +218,7 @@ jobs:
         base-branch: 'main'
 
     - name: Lint markdown
-      uses: DavidAnson/markdownlint-cli2-action@v16
+      uses: DavidAnson/markdownlint-cli2-action@v20
       with:
         globs: |
           README.md
