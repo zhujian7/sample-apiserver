@@ -30,6 +30,10 @@ func init() {
 	Scheme.AddKnownTypes(gv, &widgets.Widget{}, &widgets.WidgetList{}, &gadgets.Gadget{}, &gadgets.GadgetList{})
 	metav1.AddToGroupVersion(Scheme, gv)
 
+	// Register internal version types for PATCH operations
+	internalGV := schema.GroupVersion{Group: mycommon.GroupName, Version: runtime.APIVersionInternal}
+	Scheme.AddKnownTypes(internalGV, &widgets.Widget{}, &widgets.WidgetList{}, &gadgets.Gadget{}, &gadgets.GadgetList{})
+
 	// Register meta types
 	metav1.AddToGroupVersion(Scheme, schema.GroupVersion{Version: "v1"})
 }
