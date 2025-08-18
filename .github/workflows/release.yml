@@ -184,7 +184,7 @@ jobs:
         
         # Update image tags in deployment files
         echo "Updating image tag to ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}"
-        sed "s|quay.io/zhujian/mytest-apiserver:dev.*|${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}|g" \
+        sed "s|image: quay.io/zhujian/mytest-apiserver:dev.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}|g" \
           deploy/base/deploy.yaml > release-artifacts/deploy.yaml
         
         # Verify the sed command worked

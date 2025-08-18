@@ -16,7 +16,7 @@ jobs:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       security-events: write
       actions: read
       packages: write
@@ -90,6 +90,8 @@ jobs:
         image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
         format: spdx-json
         output-file: sbom.spdx.json
+        registry-username: ${{ secrets.QUAY_USERNAME }}
+        registry-password: ${{ secrets.QUAY_PASSWORD }}
 
     - name: Upload SBOM
       if: github.event_name != 'pull_request'
