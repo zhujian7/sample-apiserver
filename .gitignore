@@ -1,3 +1,4 @@
 mytest-apiserver
 .claude
 bin/*
+violations.report

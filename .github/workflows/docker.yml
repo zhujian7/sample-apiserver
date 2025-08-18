@@ -15,6 +15,9 @@ jobs:
   docker:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     outputs:
       version: ${{ steps.meta.outputs.version }}
       digest: ${{ steps.build.outputs.digest }}
