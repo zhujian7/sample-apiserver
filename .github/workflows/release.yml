@@ -58,7 +58,8 @@ jobs:
           docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.version }}
           
           # Deploy with Helm or kubectl
-          kubectl apply -f https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/deploy.yaml
+          curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/mytest-apiserver-manifests-${{ steps.get_version.outputs.version }}.tar.gz | tar xz
+          kubectl apply -f manifests/
           ```
           
           ## Installation
@@ -162,8 +163,8 @@ jobs:
         tag_name: ${{ needs.create-release.outputs.version }}
         files: ./bin/checksums.txt
 
-  build-deployment-artifacts:
-    name: Build Deployment Artifacts
+  build-manifest-artifacts:
+    name: Build Manifest Artifacts
     runs-on: ubuntu-latest
     needs: create-release
     permissions:
@@ -175,28 +176,28 @@ jobs:
 
     - name: Prepare deployment artifacts
       run: |
-        mkdir -p release-artifacts
+        mkdir -p release-artifacts/manifests
         
         # Debug environment variables
         echo "REGISTRY: ${{ env.REGISTRY }}"
         echo "IMAGE_NAME: ${{ env.IMAGE_NAME }}"
         echo "VERSION: ${{ needs.create-release.outputs.version }}"
         
-        # Update image tags in deployment files
+        # Update image tags in deployment files and copy directly to manifests folder
         echo "Updating image tag to ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}"
         sed "s|image: quay.io/zhujian/mytest-apiserver:dev|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}|g" \
-          deploy/base/deploy.yaml > release-artifacts/deploy.yaml
+          deploy/base/deploy.yaml > release-artifacts/manifests/deploy.yaml
         
         # Verify the sed command worked
         EXPECTED_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}"
         echo "Expected image: $EXPECTED_IMAGE"
         echo "Checking if replacement worked..."
         
-        if ! grep -q "$EXPECTED_IMAGE" release-artifacts/deploy.yaml; then
+        if ! grep -q "$EXPECTED_IMAGE" release-artifacts/manifests/deploy.yaml; then
           echo "Error: Image tag replacement failed"
           echo "Expected: $EXPECTED_IMAGE"
           echo "Actual content around image line:"
-          grep -A 3 -B 3 "image:" release-artifacts/deploy.yaml || echo "No image line found"
+          grep -A 3 -B 3 "image:" release-artifacts/manifests/deploy.yaml || echo "No image line found"
           echo ""
           echo "Original file content around image line:"
           grep -A 3 -B 3 "image:" deploy/base/deploy.yaml || echo "No image line found in original"
@@ -204,29 +205,21 @@ jobs:
         fi
         echo "✅ Image tag replacement successful"
         
-        # Copy other deployment files
-        cp deploy/base/apiservice.yaml release-artifacts/
-        cp -r deploy/certificates release-artifacts/
-        cp deploy/README.md release-artifacts/
+        # Copy other deployment files directly to manifests folder
+        cp deploy/base/apiservice.yaml release-artifacts/manifests/
+        cp -r deploy/certificates release-artifacts/manifests/
+        cp deploy/README.md release-artifacts/manifests/
         
-        # Create deployment bundle
-        tar -czf release-artifacts/mytest-apiserver-deploy-${{ needs.create-release.outputs.version }}.tar.gz -C release-artifacts .
+        # Create manifests bundle from the manifests subdirectory
+        tar -czf release-artifacts/mytest-apiserver-manifests-${{ needs.create-release.outputs.version }}.tar.gz -C release-artifacts manifests
 
-    - name: Upload deployment artifacts
+    - name: Upload manifests bundle
       uses: softprops/action-gh-release@v2.1.0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ needs.create-release.outputs.version }}
-        files: ./release-artifacts/deploy.yaml
-
-    - name: Upload deployment bundle
-      uses: softprops/action-gh-release@v2.1.0
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ needs.create-release.outputs.version }}
-        files: ./release-artifacts/mytest-apiserver-deploy-${{ needs.create-release.outputs.version }}.tar.gz
+        files: ./release-artifacts/mytest-apiserver-manifests-${{ needs.create-release.outputs.version }}.tar.gz
 
   docker-release:
     name: Build and Push Release Docker Image
@@ -277,7 +270,7 @@ jobs:
   notify:
     name: Notify Release
     runs-on: ubuntu-latest
-    needs: [create-release, build-binaries, build-deployment-artifacts, docker-release]
+    needs: [create-release, build-binaries, build-manifest-artifacts, docker-release]
     if: always()
     
     steps:
