@@ -177,19 +177,32 @@ jobs:
       run: |
         mkdir -p release-artifacts
         
+        # Debug environment variables
+        echo "REGISTRY: ${{ env.REGISTRY }}"
+        echo "IMAGE_NAME: ${{ env.IMAGE_NAME }}"
+        echo "VERSION: ${{ needs.create-release.outputs.version }}"
+        
         # Update image tags in deployment files
         echo "Updating image tag to ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}"
         sed "s|quay.io/zhujian/mytest-apiserver:dev.*|${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}|g" \
           deploy/base/deploy.yaml > release-artifacts/deploy.yaml
         
         # Verify the sed command worked
-        if ! grep -q "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}" release-artifacts/deploy.yaml; then
+        EXPECTED_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}"
+        echo "Expected image: $EXPECTED_IMAGE"
+        echo "Checking if replacement worked..."
+        
+        if ! grep -q "$EXPECTED_IMAGE" release-artifacts/deploy.yaml; then
           echo "Error: Image tag replacement failed"
-          echo "Expected: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}"
-          echo "Content of deploy.yaml:"
-          cat release-artifacts/deploy.yaml | grep -A 2 -B 2 "image:"
+          echo "Expected: $EXPECTED_IMAGE"
+          echo "Actual content around image line:"
+          grep -A 3 -B 3 "image:" release-artifacts/deploy.yaml || echo "No image line found"
+          echo ""
+          echo "Original file content around image line:"
+          grep -A 3 -B 3 "image:" deploy/base/deploy.yaml || echo "No image line found in original"
           exit 1
         fi
+        echo "✅ Image tag replacement successful"
         
         # Copy other deployment files
         cp deploy/base/apiservice.yaml release-artifacts/
