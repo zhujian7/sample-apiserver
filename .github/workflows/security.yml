@@ -316,10 +316,7 @@ jobs:
     - name: Run TruffleHog
       uses: trufflesecurity/trufflehog@v3.90.5
       with:
-        path: ./
-        base: main
-        head: HEAD
-        extra_args: --debug --only-verified
+        extra_args: --debug --only-verified --results=verified,unknown
 
   security-summary:
     name: Security Summary
