@@ -19,6 +19,7 @@ jobs:
       contents: read
       security-events: write
       actions: read
+      packages: write
     outputs:
       version: ${{ steps.meta.outputs.version }}
       digest: ${{ steps.build.outputs.digest }}

@@ -178,8 +178,18 @@ jobs:
         mkdir -p release-artifacts
         
         # Update image tags in deployment files
-        sed "s|quay.io/zhujian/mytest-apiserver:dev|${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}|g" \
+        echo "Updating image tag to ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}"
+        sed "s|quay.io/zhujian/mytest-apiserver:dev.*|${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}|g" \
           deploy/base/deploy.yaml > release-artifacts/deploy.yaml
+        
+        # Verify the sed command worked
+        if ! grep -q "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}" release-artifacts/deploy.yaml; then
+          echo "Error: Image tag replacement failed"
+          echo "Expected: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}"
+          echo "Content of deploy.yaml:"
+          cat release-artifacts/deploy.yaml | grep -A 2 -B 2 "image:"
+          exit 1
+        fi
         
         # Copy other deployment files
         cp deploy/base/apiservice.yaml release-artifacts/
