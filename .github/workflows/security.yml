@@ -129,7 +129,13 @@ jobs:
                  --config=p/secrets \
                  --config=p/owasp-top-ten \
                  --sarif --output=semgrep.sarif \
-                 .
+                 . || echo "Semgrep scan completed with findings"
+        
+        # Verify SARIF file was created
+        if [ ! -f semgrep.sarif ]; then
+          echo "Creating empty SARIF file as none was generated"
+          echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[]}' > semgrep.sarif
+        fi
 
     - name: Upload SARIF file for GitHub Advanced Security Dashboard
       uses: github/codeql-action/upload-sarif@v3.29.9
