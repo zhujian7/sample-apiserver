@@ -97,7 +97,7 @@ spec:
       serviceAccountName: mytest-apiserver
       containers:
         - name: server
-          image: quay.io/zhujian/mytest-apiserver:main
+          image: quay.io/zhujian/mytest-apiserver:dev # or mytest-apiserver:dev if using Docker
           imagePullPolicy: Always
           args:
             - --secure-port=8443
