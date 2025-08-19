@@ -88,7 +88,22 @@ install() {
     
     # Wait for deployment to be ready
     echo "5. Waiting for deployment to be ready..."
-    kubectl wait --for=condition=available --timeout=300s deployment/mytest-apiserver -n $NAMESPACE
+    if ! kubectl wait --for=condition=available --timeout=300s deployment/mytest-apiserver -n $NAMESPACE; then
+        echo "❌ ERROR: Deployment failed to become ready within timeout"
+        echo "🔍 Debugging information:"
+        echo "Deployment status:"
+        kubectl describe deployment mytest-apiserver -n $NAMESPACE || true
+        echo ""
+        echo "Pod status:"
+        kubectl get pods -n $NAMESPACE -o wide || true
+        echo ""
+        echo "Pod logs:"
+        kubectl logs -n $NAMESPACE -l app=mytest-apiserver --tail=50 || true
+        echo ""
+        echo "Events:"
+        kubectl get events -n $NAMESPACE --sort-by='.lastTimestamp' || true
+        exit 1
+    fi
 
     # Register APIService
     echo "6. Registering APIService..."
