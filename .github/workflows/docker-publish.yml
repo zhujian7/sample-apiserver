@@ -1,18 +1,16 @@
-name: Docker Build and Push
+name: Docker Build and Publish
 
 on:
   push:
     branches: [ main ]
     tags: [ 'v*' ]
-  pull_request:
-    branches: [ main ]
 
 env:
   REGISTRY: quay.io
   IMAGE_NAME: zhujian/mytest-apiserver
 
 jobs:
-  docker:
+  build-and-push:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
     permissions:
@@ -45,11 +43,9 @@ jobs:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
           type=ref,event=branch
-          type=ref,event=pr
           type=semver,pattern={{version}}
           type=raw,value=latest,enable={{is_default_branch}}
           type=sha,prefix={{branch}}-,enable={{is_default_branch}}
-          type=sha,prefix=pr-,enable=${{ github.event_name == 'pull_request' }}
 
     - name: Build and push Docker image
       id: build
@@ -57,7 +53,7 @@ jobs:
       with:
         context: .
         platforms: linux/amd64,linux/arm64
-        push: ${{ github.event_name != 'pull_request' }}
+        push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
@@ -65,10 +61,9 @@ jobs:
         build-args: |
           VERSION=${{ steps.meta.outputs.version }}
           COMMIT=${{ github.sha }}
-          DATE=${{ steps.meta.outputs.date }}
+          DATE=${{ github.event.head_commit.timestamp }}
 
-    - name: Run Trivy vulnerability scanner on image
-      if: github.event_name != 'pull_request'
+    - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@0.32.0
       with:
         image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
@@ -76,13 +71,11 @@ jobs:
         output: 'trivy-image-results.sarif'
 
     - name: Upload Trivy scan results
-      if: github.event_name != 'pull_request'
       uses: github/codeql-action/upload-sarif@v3.29.9
       with:
         sarif_file: 'trivy-image-results.sarif'
 
     - name: Generate SBOM
-      if: github.event_name != 'pull_request'
       uses: anchore/sbom-action@v0.20.5
       with:
         image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
@@ -92,7 +85,6 @@ jobs:
         registry-password: ${{ secrets.QUAY_PASSWORD }}
 
     - name: Upload SBOM
-      if: github.event_name != 'pull_request'
       uses: actions/upload-artifact@v4
       with:
         name: sbom
@@ -101,8 +93,7 @@ jobs:
   sign:
     name: Sign Container Image
     runs-on: ubuntu-latest
-    needs: docker
-    if: github.event_name != 'pull_request'
+    needs: build-and-push
     permissions:
       contents: read
       id-token: write
@@ -125,18 +116,17 @@ jobs:
       run: |
         echo "Registry: ${{ env.REGISTRY }}"
         echo "Image: ${{ env.IMAGE_NAME }}"
-        echo "Digest: ${{ needs.docker.outputs.digest }}"
+        echo "Digest: ${{ needs.build-and-push.outputs.digest }}"
         
-        IMAGE_REF="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.docker.outputs.digest }}"
+        IMAGE_REF="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build-and-push.outputs.digest }}"
         echo "Signing image: $IMAGE_REF"
         
         cosign sign --yes "$IMAGE_REF"
 
   test-image:
-    name: Test Docker Image
+    name: Test Published Image
     runs-on: ubuntu-latest
-    needs: docker
-    if: github.event_name != 'pull_request'
+    needs: build-and-push
     
     steps:
     - name: Checkout code
@@ -146,14 +136,12 @@ jobs:
       run: |
         # Test that the image runs and serves health endpoints
         docker run --rm -d --name test-server -p 8443:8443 \
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.docker.outputs.version }} \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.version }} \
           --secure-port=8443 --help > /dev/null
         
         # Test image labels and metadata
-        docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.docker.outputs.version }}
+        docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.version }}
 
     - name: Test multi-architecture build
-      if: github.event_name != 'pull_request'
       run: |
-        docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.docker.outputs.version }}
-
+        docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.version }}

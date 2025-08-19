@@ -1,0 +1,81 @@
+name: PR Check
+
+on:
+  pull_request:
+    branches: [ main ]
+
+env:
+  IMAGE_NAME: mytest-apiserver
+
+jobs:
+  build-and-test:
+    name: Build and Test Docker Image
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3.11.1
+
+    - name: Build Docker image
+      uses: docker/build-push-action@v6.18.0
+      with:
+        context: .
+        platforms: linux/amd64
+        push: false
+        tags: ${{ env.IMAGE_NAME }}:pr-${{ github.event.number }}
+        labels: |
+          org.opencontainers.image.source=${{ github.event.repository.html_url }}
+          org.opencontainers.image.revision=${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        load: true
+        build-args: |
+          VERSION=pr-${{ github.event.number }}
+          COMMIT=${{ github.sha }}
+          DATE=${{ github.event.pull_request.updated_at }}
+
+    - name: Create kind cluster and deploy API server
+      run: |
+        # Create kind cluster using the existing setup
+        make kind-create
+        
+        # Load the PR image into kind cluster  
+        kind load docker-image ${{ env.IMAGE_NAME }}:pr-${{ github.event.number }} --name kind
+        
+        # Update deployment to use PR image
+        sed -i 's|quay.io/zhujian/mytest-apiserver:dev|${{ env.IMAGE_NAME }}:pr-${{ github.event.number }}|g' deploy/base/deploy.yaml
+        
+        # Deploy the API server using existing deployment scripts
+        make deploy
+
+    - name: Run e2e tests
+      run: |
+        # Wait for API server to be ready
+        kubectl wait --for=condition=available --timeout=120s deployment/mytest-apiserver -n my-apiserver-system
+        
+        # Check deployment status
+        make status
+        
+        # Run integration tests against the deployed API server
+        make test-integration
+        
+        # Run the quick e2e test
+        make quick-test
+
+    - name: Run security scan
+      uses: aquasecurity/trivy-action@0.32.0
+      with:
+        image-ref: ${{ env.IMAGE_NAME }}:pr-${{ github.event.number }}
+        format: 'table'
+        exit-code: '0'
+
+    - name: Show logs on failure
+      if: failure()
+      run: |
+        echo "🔍 Debugging information:"
+        kubectl get pods -A
+        kubectl get apiservices
+        make logs || true
