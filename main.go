@@ -51,7 +51,8 @@ func init() {
 	// Register aliases for different widget resource types
 	for resource := range NamespaceResources {
 		kind := resourceToKind(resource)
-		Scheme.AddKnownTypeWithName(schema.GroupVersionKind{Group: mycommon.GroupName, Version: mycommon.APIVersion, Kind: kind}, &widgets.Widget{})
+		Scheme.AddKnownTypeWithName(schema.GroupVersionKind{
+			Group: mycommon.GroupName, Version: mycommon.APIVersion, Kind: kind}, &widgets.Widget{})
 	}
 
 	metav1.AddToGroupVersion(Scheme, gv)
@@ -61,7 +62,8 @@ func init() {
 	Scheme.AddKnownTypes(internalGV, &widgets.Widget{}, &widgets.WidgetList{}, &gadgets.Gadget{}, &gadgets.GadgetList{})
 	for resource := range NamespaceResources {
 		kind := resourceToKind(resource)
-		Scheme.AddKnownTypeWithName(schema.GroupVersionKind{Group: mycommon.GroupName, Version: runtime.APIVersionInternal, Kind: kind}, &widgets.Widget{})
+		Scheme.AddKnownTypeWithName(schema.GroupVersionKind{
+			Group: mycommon.GroupName, Version: runtime.APIVersionInternal, Kind: kind}, &widgets.Widget{})
 	}
 
 	// Register meta types

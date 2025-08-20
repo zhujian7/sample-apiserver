@@ -20,6 +20,11 @@ import (
 	"example.com/mytest-apiserver/pkg/common"
 )
 
+const (
+	// DefaultNamespace is the fallback namespace when none is specified
+	DefaultNamespace = "default"
+)
+
 // Widget represents a sample widget resource
 type Widget struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -243,7 +248,7 @@ func (r *WidgetREST) Get(ctx context.Context, name string, options *metav1.GetOp
 		if strings.Contains(name, "/") {
 			namespace, name = r.storage.parseKey(name)
 		} else {
-			namespace = "default" // fallback
+			namespace = DefaultNamespace // fallback
 		}
 	}
 
@@ -298,7 +303,7 @@ func (r *WidgetREST) Update(ctx context.Context, name string, objInfo rest.Updat
 		if strings.Contains(name, "/") {
 			namespace, name = r.storage.parseKey(name)
 		} else {
-			namespace = "default" // fallback
+			namespace = DefaultNamespace // fallback
 		}
 	}
 
@@ -333,7 +338,7 @@ func (r *WidgetREST) Delete(ctx context.Context, name string, deleteValidation r
 		if strings.Contains(name, "/") {
 			namespace, name = r.storage.parseKey(name)
 		} else {
-			namespace = "default" // fallback
+			namespace = DefaultNamespace // fallback
 		}
 	}
 
