@@ -3,6 +3,7 @@ package widgets
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -102,7 +103,7 @@ func (s *MemoryStorage) Get(name string) (*Widget, error) {
 	return widget.DeepCopyObject().(*Widget), nil
 }
 
-func (s *MemoryStorage) List() (*WidgetList, error) {
+func (s *MemoryStorage) List(ns string) (*WidgetList, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -115,7 +116,12 @@ func (s *MemoryStorage) List() (*WidgetList, error) {
 	}
 
 	for _, widget := range s.widgets {
-		list.Items = append(list.Items, *widget.DeepCopyObject().(*Widget))
+		if len(ns) == 0 {
+			list.Items = append(list.Items, *widget.DeepCopyObject().(*Widget))
+		} else if widget.Namespace == ns {
+			list.Items = append(list.Items, *widget.DeepCopyObject().(*Widget))
+		}
+
 	}
 
 	return list, nil
@@ -175,7 +181,9 @@ func (s *MemoryStorage) Delete(name string) error {
 }
 
 type WidgetREST struct {
-	storage *MemoryStorage
+	storage      *MemoryStorage
+	namespace    string
+	resourceName string
 }
 
 // Ensure WidgetREST implements the required interfaces
@@ -186,10 +194,12 @@ var _ rest.Updater = &WidgetREST{}
 var _ rest.GracefulDeleter = &WidgetREST{}
 var _ rest.Scoper = &WidgetREST{}
 var _ rest.Storage = &WidgetREST{}
+var _ rest.GroupVersionKindProvider = &WidgetREST{}
 
 func NewWidgetREST() *WidgetREST {
 	return &WidgetREST{
-		storage: NewMemoryStorage(),
+		storage:      NewMemoryStorage(),
+		resourceName: "widgets",
 	}
 }
 
@@ -206,7 +216,7 @@ func (r *WidgetREST) Get(ctx context.Context, name string, options *metav1.GetOp
 }
 
 func (r *WidgetREST) List(ctx context.Context, options *internalversion.ListOptions) (runtime.Object, error) {
-	return r.storage.List()
+	return r.storage.List(r.namespace)
 }
 
 func (r *WidgetREST) Create(ctx context.Context, obj runtime.Object, createValidation rest.ValidateObjectFunc,
@@ -267,6 +277,47 @@ func (r *WidgetREST) GetSingularName() string {
 	return "widget"
 }
 
+// resourceToKind converts a resource name to a Kind name (e.g., "widgetsdefault" -> "Widgetsdefault")
+func resourceToKind(resource string) string {
+	if resource == "" || resource == "widgets" {
+		return "Widget"
+	}
+	// Capitalize first letter
+	if len(resource) > 0 {
+		resource = strings.ToUpper(resource[:1]) + resource[1:]
+	}
+	return resource
+}
+
+func (r *WidgetREST) GroupVersionKind(containingGV schema.GroupVersion) schema.GroupVersionKind {
+	kind := resourceToKind(r.resourceName)
+	return schema.GroupVersionKind{
+		Group:   containingGV.Group,
+		Version: containingGV.Version,
+		Kind:    kind,
+	}
+}
+
 func (r *WidgetREST) Destroy() {
 	// Cleanup resources if needed
+}
+
+func (r *WidgetREST) GetStorage() *MemoryStorage {
+	return r.storage
+}
+
+func NewNSWidgetREST(ns string, resourceName string) *WidgetREST {
+	return &WidgetREST{
+		storage:      NewMemoryStorage(),
+		namespace:    ns,
+		resourceName: resourceName,
+	}
+}
+
+func NewNSWidgetRESTWithSharedStorage(ns string, resourceName string, sharedStorage *MemoryStorage) *WidgetREST {
+	return &WidgetREST{
+		storage:      sharedStorage,
+		namespace:    ns,
+		resourceName: resourceName,
+	}
 }

@@ -204,7 +204,7 @@ func TestWidgetStorage_List(t *testing.T) {
 	storage := NewMemoryStorage()
 
 	// Test listing empty storage
-	list, err := storage.List()
+	list, err := storage.List("")
 	if err != nil {
 		t.Fatalf("Failed to list widgets: %v", err)
 	}
@@ -231,7 +231,7 @@ func TestWidgetStorage_List(t *testing.T) {
 	}
 
 	// List all widgets
-	list, err = storage.List()
+	list, err = storage.List("")
 	if err != nil {
 		t.Fatalf("Failed to list widgets: %v", err)
 	}
@@ -280,7 +280,7 @@ func TestWidgetStorage_ThreadSafety(t *testing.T) {
 	}
 
 	// Verify all widgets were created
-	list, err := storage.List()
+	list, err := storage.List("")
 	if err != nil {
 		t.Fatalf("Failed to list widgets: %v", err)
 	}
