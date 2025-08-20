@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"example.com/mytest-apiserver/pkg/apis/gadgets"
-	// "example.com/mytest-apiserver/pkg/apis/nswidgets"
 	"example.com/mytest-apiserver/pkg/apis/widgets"
 	mycommon "example.com/mytest-apiserver/pkg/common"
 	generatedopenapi "example.com/mytest-apiserver/pkg/generated/openapi"

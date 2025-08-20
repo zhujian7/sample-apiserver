@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
 
 	"example.com/mytest-apiserver/pkg/common"
@@ -92,11 +93,27 @@ func NewMemoryStorage() *MemoryStorage {
 	}
 }
 
-func (s *MemoryStorage) Get(name string) (*Widget, error) {
+func (s *MemoryStorage) getKey(namespace, name string) string {
+	if namespace == "" {
+		return name
+	}
+	return namespace + "/" + name
+}
+
+func (s *MemoryStorage) parseKey(key string) (namespace, name string) {
+	parts := strings.SplitN(key, "/", 2)
+	if len(parts) == 2 {
+		return parts[0], parts[1]
+	}
+	return "", parts[0]
+}
+
+func (s *MemoryStorage) Get(namespace, name string) (*Widget, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	widget, exists := s.widgets[name]
+	key := s.getKey(namespace, name)
+	widget, exists := s.widgets[key]
 	if !exists {
 		return nil, errors.NewNotFound(schema.GroupResource{Group: common.GroupName, Resource: "widgets"}, name)
 	}
@@ -135,8 +152,9 @@ func (s *MemoryStorage) Create(widget *Widget) (*Widget, error) {
 		widget.Name = string(uuid.NewUUID())
 	}
 
-	if _, exists := s.widgets[widget.Name]; exists {
-		return nil, fmt.Errorf("widget %s already exists", widget.Name)
+	key := s.getKey(widget.Namespace, widget.Name)
+	if _, exists := s.widgets[key]; exists {
+		return nil, fmt.Errorf("widget %s already exists in namespace %s", widget.Name, widget.Namespace)
 	}
 
 	now := metav1.NewTime(time.Now())
@@ -146,7 +164,7 @@ func (s *MemoryStorage) Create(widget *Widget) (*Widget, error) {
 	widget.UID = uuid.NewUUID()
 	widget.Status.Phase = "Active"
 
-	s.widgets[widget.Name] = widget.DeepCopyObject().(*Widget)
+	s.widgets[key] = widget.DeepCopyObject().(*Widget)
 	return widget, nil
 }
 
@@ -154,7 +172,8 @@ func (s *MemoryStorage) Update(widget *Widget) (*Widget, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	existing, exists := s.widgets[widget.Name]
+	key := s.getKey(widget.Namespace, widget.Name)
+	existing, exists := s.widgets[key]
 	if !exists {
 		return nil, errors.NewNotFound(schema.GroupResource{Group: common.GroupName, Resource: "widgets"}, widget.Name)
 	}
@@ -164,19 +183,20 @@ func (s *MemoryStorage) Update(widget *Widget) (*Widget, error) {
 	widget.ResourceVersion = fmt.Sprintf("%d", s.versionCounter)
 	s.versionCounter++
 
-	s.widgets[widget.Name] = widget.DeepCopyObject().(*Widget)
+	s.widgets[key] = widget.DeepCopyObject().(*Widget)
 	return widget, nil
 }
 
-func (s *MemoryStorage) Delete(name string) error {
+func (s *MemoryStorage) Delete(namespace, name string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.widgets[name]; !exists {
+	key := s.getKey(namespace, name)
+	if _, exists := s.widgets[key]; !exists {
 		return errors.NewNotFound(schema.GroupResource{Group: common.GroupName, Resource: "widgets"}, name)
 	}
 
-	delete(s.widgets, name)
+	delete(s.widgets, key)
 	return nil
 }
 
@@ -212,11 +232,45 @@ func (r *WidgetREST) NewList() runtime.Object {
 }
 
 func (r *WidgetREST) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
-	return r.storage.Get(name)
+	var namespace string
+
+	// Get namespace from request context (this is how Kubernetes passes the namespace)
+	requestInfo, ok := request.RequestInfoFrom(ctx)
+	if ok && requestInfo.Namespace != "" {
+		namespace = requestInfo.Namespace
+	} else {
+		// Check if the name contains namespace info (format: namespace/name)
+		if strings.Contains(name, "/") {
+			namespace, name = r.storage.parseKey(name)
+		} else {
+			namespace = "default" // fallback
+		}
+	}
+
+	// For namespace-specific endpoints (like widgetsmce, widgetsdefault),
+	// the r.namespace field is just for filtering/validation, but we still
+	// use the namespace from the request context for the actual operation
+
+	return r.storage.Get(namespace, name)
 }
 
 func (r *WidgetREST) List(ctx context.Context, options *internalversion.ListOptions) (runtime.Object, error) {
-	return r.storage.List(r.namespace)
+	var namespace string
+
+	// For namespace-specific endpoints (like widgetsmce, widgetsdefault),
+	// use the configured namespace to filter the view
+	if r.namespace != "" {
+		namespace = r.namespace
+	} else {
+		// For the main widgets endpoint, get namespace from request context
+		requestInfo, ok := request.RequestInfoFrom(ctx)
+		if ok && requestInfo.Namespace != "" {
+			namespace = requestInfo.Namespace
+		}
+		// If no namespace specified, list all (namespace = "")
+	}
+
+	return r.storage.List(namespace)
 }
 
 func (r *WidgetREST) Create(ctx context.Context, obj runtime.Object, createValidation rest.ValidateObjectFunc,
@@ -232,7 +286,23 @@ func (r *WidgetREST) Create(ctx context.Context, obj runtime.Object, createValid
 func (r *WidgetREST) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo,
 	createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc,
 	forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
-	oldObj, err := r.storage.Get(name)
+
+	var namespace string
+
+	// Get namespace from request context (this is how Kubernetes passes the namespace)
+	requestInfo, ok := request.RequestInfoFrom(ctx)
+	if ok && requestInfo.Namespace != "" {
+		namespace = requestInfo.Namespace
+	} else {
+		// Check if the name contains namespace info (format: namespace/name)
+		if strings.Contains(name, "/") {
+			namespace, name = r.storage.parseKey(name)
+		} else {
+			namespace = "default" // fallback
+		}
+	}
+
+	oldObj, err := r.storage.Get(namespace, name)
 	if err != nil {
 		return nil, false, err
 	}
@@ -244,18 +314,35 @@ func (r *WidgetREST) Update(ctx context.Context, name string, objInfo rest.Updat
 
 	widget := updatedObj.(*Widget)
 	widget.Name = name
+	widget.Namespace = namespace
 	updatedWidget, err := r.storage.Update(widget)
 	return updatedWidget, false, err
 }
 
 func (r *WidgetREST) Delete(ctx context.Context, name string, deleteValidation rest.ValidateObjectFunc,
 	options *metav1.DeleteOptions) (runtime.Object, bool, error) {
-	obj, err := r.storage.Get(name)
+
+	var namespace string
+
+	// Get namespace from request context (this is how Kubernetes passes the namespace)
+	requestInfo, ok := request.RequestInfoFrom(ctx)
+	if ok && requestInfo.Namespace != "" {
+		namespace = requestInfo.Namespace
+	} else {
+		// Check if the name contains namespace info (format: namespace/name)
+		if strings.Contains(name, "/") {
+			namespace, name = r.storage.parseKey(name)
+		} else {
+			namespace = "default" // fallback
+		}
+	}
+
+	obj, err := r.storage.Get(namespace, name)
 	if err != nil {
 		return nil, false, err
 	}
 
-	err = r.storage.Delete(name)
+	err = r.storage.Delete(namespace, name)
 	return obj, true, err
 }
 
