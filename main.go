@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"strings"
 
 	"example.com/mytest-apiserver/pkg/apis/gadgets"
 	"example.com/mytest-apiserver/pkg/apis/widgets"
@@ -23,16 +24,47 @@ import (
 var (
 	Scheme = runtime.NewScheme()
 	Codecs = serializer.NewCodecFactory(Scheme)
+
+	// NamespaceResources maps resource names to their target namespaces
+	NamespaceResources = map[string]string{
+		"widgetsdefault": "default",
+		"widgetsmce":     "multicluster-engine",
+	}
 )
+
+// resourceToKind converts a resource name to a Kind name (e.g., "widgetsdefault" -> "Widgetsdefault")
+func resourceToKind(resource string) string {
+	if resource == "" || resource == "widgets" {
+		return "Widget"
+	}
+	// Capitalize first letter
+	if len(resource) > 0 {
+		resource = strings.ToUpper(resource[:1]) + resource[1:]
+	}
+	return resource
+}
 
 func init() {
 	gv := schema.GroupVersion{Group: mycommon.GroupName, Version: mycommon.APIVersion}
 	Scheme.AddKnownTypes(gv, &widgets.Widget{}, &widgets.WidgetList{}, &gadgets.Gadget{}, &gadgets.GadgetList{})
+
+	// Register aliases for different widget resource types
+	for resource := range NamespaceResources {
+		kind := resourceToKind(resource)
+		Scheme.AddKnownTypeWithName(schema.GroupVersionKind{
+			Group: mycommon.GroupName, Version: mycommon.APIVersion, Kind: kind}, &widgets.Widget{})
+	}
+
 	metav1.AddToGroupVersion(Scheme, gv)
 
 	// Register internal version types for PATCH operations
 	internalGV := schema.GroupVersion{Group: mycommon.GroupName, Version: runtime.APIVersionInternal}
 	Scheme.AddKnownTypes(internalGV, &widgets.Widget{}, &widgets.WidgetList{}, &gadgets.Gadget{}, &gadgets.GadgetList{})
+	for resource := range NamespaceResources {
+		kind := resourceToKind(resource)
+		Scheme.AddKnownTypeWithName(schema.GroupVersionKind{
+			Group: mycommon.GroupName, Version: runtime.APIVersionInternal, Kind: kind}, &widgets.Widget{})
+	}
 
 	// Register meta types
 	metav1.AddToGroupVersion(Scheme, schema.GroupVersion{Version: "v1"})
@@ -42,11 +74,17 @@ func installAPI(s *genericapiserver.GenericAPIServer) error {
 	widgetREST := widgets.NewWidgetREST()
 	gadgetREST := gadgets.NewGadgetREST()
 
-	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(mycommon.GroupName, Scheme, metav1.ParameterCodec, Codecs)
-	apiGroupInfo.VersionedResourcesStorageMap[mycommon.APIVersion] = map[string]rest.Storage{
+	restStorage := map[string]rest.Storage{
 		"widgets": widgetREST,
 		"gadgets": gadgetREST,
 	}
+	for resource, ns := range NamespaceResources {
+		nswidgetREST := widgets.NewNSWidgetRESTWithSharedStorage(ns, resource, widgetREST.GetStorage())
+		restStorage[resource] = nswidgetREST
+
+	}
+	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(mycommon.GroupName, Scheme, metav1.ParameterCodec, Codecs)
+	apiGroupInfo.VersionedResourcesStorageMap[mycommon.APIVersion] = restStorage
 
 	return s.InstallAPIGroup(&apiGroupInfo)
 }

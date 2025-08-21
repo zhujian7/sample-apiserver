@@ -13,7 +13,8 @@ func TestWidgetStorage_Create(t *testing.T) {
 
 	widget := &Widget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-widget",
+			Name:      "test-widget",
+			Namespace: DefaultNamespace,
 		},
 		Spec: WidgetSpec{
 			Name:        "Test Widget",
@@ -59,7 +60,7 @@ func TestWidgetStorage_Get(t *testing.T) {
 	storage := NewMemoryStorage()
 
 	// Test getting non-existent widget
-	_, err := storage.Get("non-existent")
+	_, err := storage.Get(DefaultNamespace, "non-existent")
 	if err == nil {
 		t.Error("Expected error when getting non-existent widget")
 	}
@@ -67,7 +68,8 @@ func TestWidgetStorage_Get(t *testing.T) {
 	// Create a widget
 	widget := &Widget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-widget",
+			Name:      "test-widget",
+			Namespace: DefaultNamespace,
 		},
 		Spec: WidgetSpec{
 			Name:        "Test Widget",
@@ -81,7 +83,7 @@ func TestWidgetStorage_Get(t *testing.T) {
 	}
 
 	// Test getting existing widget
-	retrieved, err := storage.Get("test-widget")
+	retrieved, err := storage.Get(DefaultNamespace, "test-widget")
 	if err != nil {
 		t.Fatalf("Failed to get widget: %v", err)
 	}
@@ -101,7 +103,8 @@ func TestWidgetStorage_Update(t *testing.T) {
 	// Test updating non-existent widget
 	widget := &Widget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "non-existent",
+			Name:      "non-existent",
+			Namespace: DefaultNamespace,
 		},
 		Spec: WidgetSpec{
 			Size: 100,
@@ -115,7 +118,8 @@ func TestWidgetStorage_Update(t *testing.T) {
 	// Create a widget
 	originalWidget := &Widget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-widget",
+			Name:      "test-widget",
+			Namespace: DefaultNamespace,
 		},
 		Spec: WidgetSpec{
 			Name:        "Test Widget",
@@ -167,7 +171,7 @@ func TestWidgetStorage_Delete(t *testing.T) {
 	storage := NewMemoryStorage()
 
 	// Test deleting non-existent widget
-	err := storage.Delete("non-existent")
+	err := storage.Delete(DefaultNamespace, "non-existent")
 	if err == nil {
 		t.Error("Expected error when deleting non-existent widget")
 	}
@@ -175,7 +179,8 @@ func TestWidgetStorage_Delete(t *testing.T) {
 	// Create a widget
 	widget := &Widget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-widget",
+			Name:      "test-widget",
+			Namespace: DefaultNamespace,
 		},
 		Spec: WidgetSpec{
 			Name: "Test Widget",
@@ -188,13 +193,13 @@ func TestWidgetStorage_Delete(t *testing.T) {
 	}
 
 	// Delete the widget
-	err = storage.Delete("test-widget")
+	err = storage.Delete(DefaultNamespace, "test-widget")
 	if err != nil {
 		t.Fatalf("Failed to delete widget: %v", err)
 	}
 
 	// Verify it's deleted
-	_, err = storage.Get("test-widget")
+	_, err = storage.Get(DefaultNamespace, "test-widget")
 	if err == nil {
 		t.Error("Widget should be deleted")
 	}
@@ -204,7 +209,7 @@ func TestWidgetStorage_List(t *testing.T) {
 	storage := NewMemoryStorage()
 
 	// Test listing empty storage
-	list, err := storage.List()
+	list, err := storage.List("")
 	if err != nil {
 		t.Fatalf("Failed to list widgets: %v", err)
 	}
@@ -217,7 +222,8 @@ func TestWidgetStorage_List(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		widget := &Widget{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("widget-%d", i),
+				Name:      fmt.Sprintf("widget-%d", i),
+				Namespace: DefaultNamespace,
 			},
 			Spec: WidgetSpec{
 				Name: fmt.Sprintf("Widget %d", i),
@@ -231,7 +237,7 @@ func TestWidgetStorage_List(t *testing.T) {
 	}
 
 	// List all widgets
-	list, err = storage.List()
+	list, err = storage.List("")
 	if err != nil {
 		t.Fatalf("Failed to list widgets: %v", err)
 	}
@@ -243,6 +249,97 @@ func TestWidgetStorage_List(t *testing.T) {
 	// Verify list metadata
 	if list.Kind != "WidgetList" {
 		t.Errorf("Expected kind 'WidgetList', got '%s'", list.Kind)
+	}
+}
+
+func TestWidgetStorage_NamespaceIsolation(t *testing.T) {
+	storage := NewMemoryStorage()
+
+	// Create widgets with same name in different namespaces
+	widget1 := &Widget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-widget",
+			Namespace: DefaultNamespace,
+		},
+		Spec: WidgetSpec{
+			Name: "Widget in " + DefaultNamespace,
+			Size: 10,
+		},
+	}
+
+	widget2 := &Widget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-widget",
+			Namespace: "kube-system",
+		},
+		Spec: WidgetSpec{
+			Name: "Widget in kube-system",
+			Size: 20,
+		},
+	}
+
+	// Create both widgets
+	_, err := storage.Create(widget1)
+	if err != nil {
+		t.Fatalf("Failed to create widget in "+DefaultNamespace+" namespace: %v", err)
+	}
+
+	_, err = storage.Create(widget2)
+	if err != nil {
+		t.Fatalf("Failed to create widget in kube-system namespace: %v", err)
+	}
+
+	// Retrieve and verify both widgets exist independently
+	retrieved1, err := storage.Get(DefaultNamespace, "test-widget")
+	if err != nil {
+		t.Fatalf("Failed to get widget from default namespace: %v", err)
+	}
+
+	retrieved2, err := storage.Get("kube-system", "test-widget")
+	if err != nil {
+		t.Fatalf("Failed to get widget from kube-system namespace: %v", err)
+	}
+
+	// Verify they are different widgets
+	if retrieved1.Spec.Size != 10 {
+		t.Errorf("Expected "+DefaultNamespace+" widget size 10, got %d", retrieved1.Spec.Size)
+	}
+
+	if retrieved2.Spec.Size != 20 {
+		t.Errorf("Expected kube-system widget size 20, got %d", retrieved2.Spec.Size)
+	}
+
+	if retrieved1.Spec.Name == retrieved2.Spec.Name {
+		t.Error("Widgets should have different spec names")
+	}
+
+	// Test namespace-filtered listing
+	defaultList, err := storage.List(DefaultNamespace)
+	if err != nil {
+		t.Fatalf("Failed to list widgets in "+DefaultNamespace+" namespace: %v", err)
+	}
+
+	if len(defaultList.Items) != 1 {
+		t.Errorf("Expected 1 widget in "+DefaultNamespace+" namespace, got %d", len(defaultList.Items))
+	}
+
+	kubeSystemList, err := storage.List("kube-system")
+	if err != nil {
+		t.Fatalf("Failed to list widgets in kube-system namespace: %v", err)
+	}
+
+	if len(kubeSystemList.Items) != 1 {
+		t.Errorf("Expected 1 widget in kube-system namespace, got %d", len(kubeSystemList.Items))
+	}
+
+	// Test listing all widgets
+	allList, err := storage.List("")
+	if err != nil {
+		t.Fatalf("Failed to list all widgets: %v", err)
+	}
+
+	if len(allList.Items) != 2 {
+		t.Errorf("Expected 2 total widgets, got %d", len(allList.Items))
 	}
 }
 
@@ -258,7 +355,8 @@ func TestWidgetStorage_ThreadSafety(t *testing.T) {
 			for j := 0; j < numOperations; j++ {
 				widget := &Widget{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: fmt.Sprintf("widget-%d-%d", id, j),
+						Name:      fmt.Sprintf("widget-%d-%d", id, j),
+						Namespace: DefaultNamespace,
 					},
 					Spec: WidgetSpec{
 						Name: fmt.Sprintf("Widget %d-%d", id, j),
@@ -280,7 +378,7 @@ func TestWidgetStorage_ThreadSafety(t *testing.T) {
 	}
 
 	// Verify all widgets were created
-	list, err := storage.List()
+	list, err := storage.List("")
 	if err != nil {
 		t.Fatalf("Failed to list widgets: %v", err)
 	}
