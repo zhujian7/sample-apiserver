@@ -33,4 +33,8 @@ RUN microdnf install -y shadow-utils && \
 
 USER 65532:65532
 
+# Health check for API server
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD ["/usr/local/bin/mytest-apiserver", "--health-check"] || exit 1
+
 ENTRYPOINT ["/usr/local/bin/mytest-apiserver"]
