@@ -74,7 +74,7 @@ jobs:
         make quick-test
 
     - name: Run security scan
-      uses: aquasecurity/trivy-action@0.32.0
+      uses: aquasecurity/trivy-action@0.33.1
       with:
         image-ref: ${{ env.IMAGE_NAME }}:pr-${{ github.event.number }}
         format: 'table'
