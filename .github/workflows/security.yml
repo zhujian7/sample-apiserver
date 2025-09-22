@@ -47,7 +47,7 @@ jobs:
         go-version: '1.24'
 
     - name: Run Gosec Security Scanner
-      uses: securego/gosec@v2.22.8
+      uses: securego/gosec@v2.22.9
       with:
         args: '-fmt sarif -out gosec-results.sarif ./...'
 
