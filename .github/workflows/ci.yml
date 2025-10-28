@@ -99,7 +99,7 @@ jobs:
       run: make build-linux
 
     - name: Upload binary artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: mytest-apiserver-binaries
         path: |

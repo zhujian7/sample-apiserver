@@ -256,7 +256,7 @@ jobs:
         echo "Polaris found $ERRORS potential issues"
 
     - name: Upload security scan results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: always()
       with:
         name: k8s-security-results
