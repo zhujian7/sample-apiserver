@@ -220,7 +220,7 @@ jobs:
 
 
     - name: Lint markdown
-      uses: DavidAnson/markdownlint-cli2-action@v20
+      uses: DavidAnson/markdownlint-cli2-action@v21
       continue-on-error: true
       with:
         globs: |
