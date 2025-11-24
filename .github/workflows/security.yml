@@ -321,7 +321,7 @@ jobs:
         GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
     - name: Run TruffleHog
-      uses: trufflesecurity/trufflehog@v3.90.11
+      uses: trufflesecurity/trufflehog@v3.91.1
       with:
         extra_args: --debug --only-verified --results=verified,unknown
 
